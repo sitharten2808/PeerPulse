@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { BarChart, Users, Heart, Star, TrendingUp, Calendar, FileText, Upload, UserCheck, ClipboardList } from 'lucide-react';
+import { BarChart, Users, Heart, Star, TrendingUp, Calendar, FileText, Upload, UserCheck, ClipboardList, BarChart3, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -198,7 +197,7 @@ const Dashboard = () => {
           <CardDescription>Get started with team activities and assignments</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <Link to="/feedback">
               <Button className="w-full h-auto p-6 flex flex-col items-center gap-2">
                 <Heart className="h-8 w-8" />
@@ -220,11 +219,18 @@ const Dashboard = () => {
                 <span className="text-xs opacity-80">Organize student teams</span>
               </Button>
             </Link>
-            <Link to="/peer-grading">
+            <Link to="/analytics">
               <Button variant="outline" className="w-full h-auto p-6 flex flex-col items-center gap-2">
-                <UserCheck className="h-8 w-8" />
-                <span>Peer Grading</span>
-                <span className="text-xs opacity-80">Rate teammate contributions</span>
+                <BarChart3 className="h-8 w-8" />
+                <span>Analytics</span>
+                <span className="text-xs opacity-80">View feedback insights</span>
+              </Button>
+            </Link>
+            <Link to="/profile">
+              <Button variant="outline" className="w-full h-auto p-6 flex flex-col items-center gap-2">
+                <User className="h-8 w-8" />
+                <span>Profile</span>
+                <span className="text-xs opacity-80">Manage your profile</span>
               </Button>
             </Link>
           </div>

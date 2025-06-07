@@ -17,6 +17,8 @@ import TeamManagement from "@/components/TeamManagement";
 import SubmissionTracking from "@/components/SubmissionTracking";
 import PeerGrading from "@/components/PeerGrading";
 import StudentSubmission from "@/components/StudentSubmission";
+import Analytics from "@/components/Analytics";
+import Profile from "@/components/Profile";
 import PrivateRoute from "@/components/PrivateRoute";
 import NotFound from "./pages/NotFound";
 
@@ -73,6 +75,16 @@ const App = () => (
                 <Route path="/my-assignments" element={
                   <PrivateRoute>
                     <StudentSubmission />
+                  </PrivateRoute>
+                } />
+                <Route path="/analytics" element={
+                  <PrivateRoute>
+                    <Analytics />
+                  </PrivateRoute>
+                } />
+                <Route path="/profile" element={
+                  <PrivateRoute>
+                    <Profile />
                   </PrivateRoute>
                 } />
                 <Route path="*" element={<NotFound />} />
