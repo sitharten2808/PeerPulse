@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Google } from 'lucide-react';
+import { Chrome } from 'lucide-react';
 
 const Auth: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -147,7 +147,7 @@ const Auth: React.FC = () => {
               className="w-full mt-4"
               onClick={handleGoogleAuth}
             >
-              <Google className="w-4 h-4 mr-2" />
+              <Chrome className="w-4 h-4 mr-2" />
               Google
             </Button>
           </div>
