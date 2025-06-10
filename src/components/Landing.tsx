@@ -1,134 +1,489 @@
+'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, useScroll, useTransform, AnimatePresence, useSpring } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Users, Heart, BarChart, Star, ArrowDown } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  ArrowDown, Sparkles, Users, BookOpen, Trophy, Star, 
+  MessageSquare, Zap, Heart, Target, Award, Lightbulb,
+  TrendingUp, Shield, Clock, Smile, UserPlus, Github,
+  Linkedin, Twitter, Instagram, Mail, Code, Palette,
+  Smartphone, Rocket, Brain
+} from 'lucide-react';
 
 const Landing: React.FC = () => {
-  const features = [
-    {
-      icon: Heart,
-      title: 'Anonymous Feedback',
-      description: 'Give and receive honest feedback in a safe, anonymous environment that builds trust.'
-    },
-    {
-      icon: BarChart,
-      title: 'Visual Insights',
-      description: 'Beautiful charts and summaries help teams understand their dynamics at a glance.'
-    },
-    {
-      icon: Users,
-      title: 'Team Health Checks',
-      description: 'Regular pulse surveys keep your finger on the team\'s emotional wellbeing.'
-    },
-    {
-      icon: Star,
-      title: 'AI-Powered Summaries',
-      description: 'Smart algorithms identify patterns and provide actionable insights automatically.'
+  const { user } = useAuth();
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const { scrollYProgress } = useScroll();
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+  const opacity = useTransform(smoothProgress, [0, 0.2], [1, 0]);
+  const scale = useTransform(smoothProgress, [0, 0.2], [1, 0.8]);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Particle animation setup
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles: Array<{
+      x: number;
+      y: number;
+      size: number;
+      speedX: number;
+      speedY: number;
+      opacity: number;
+    }> = [];
+
+    // Create particles
+    for (let i = 0; i < 100; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 2 + 0.5,
+        speedX: Math.random() * 0.5 - 0.25,
+        speedY: Math.random() * 0.5 - 0.25,
+        opacity: Math.random() * 0.5 + 0.2,
+      });
     }
-  ];
+
+    // Animation loop
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach((particle) => {
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(147, 51, 234, ${particle.opacity})`;
+        ctx.fill();
+
+        particle.x += particle.speedX;
+        particle.y += particle.speedY;
+
+        if (particle.x < 0 || particle.x > canvas.width) particle.speedX *= -1;
+        if (particle.y < 0 || particle.y > canvas.height) particle.speedY *= -1;
+      });
+
+      requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+      const y = (e.clientY / window.innerHeight) * 2 - 1;
+      setMousePosition({ x, y });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const gradientStyle = {
+    background: `radial-gradient(circle at ${50 + mousePosition.x * 10}% ${50 + mousePosition.y * 10}%, 
+      hsl(var(--purple-light) / 0.15), 
+      hsl(var(--purple-medium) / 0.15), 
+      hsl(var(--purple-dark) / 0.15))`,
+  };
 
   return (
-    <div className="min-h-screen">
+    <main className="min-h-screen bg-black text-white overflow-x-hidden relative">
+      {/* Particle Background */}
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 z-0 opacity-50"
+      />
+
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-background via-muted/50 to-background">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
-          <div className="text-center animate-fade-in">
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold mb-6">
-              <span className="gradient-text">Peer</span>
-              <span className="text-foreground">Pulse</span>
-            </h1>
-            <p className="text-xl sm:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-              Transform your team dynamics with anonymous feedback, visual insights, and AI-powered team health analytics.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link to="/auth">
-                <Button size="lg" className="gradient-bg hover:scale-105 transition-transform pulse-shadow">
-                  Get Started Free
-                </Button>
+      <section className="h-screen flex items-center justify-center relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-black via-purple-900/20 to-black" />
+        
+        <motion.div 
+          style={{ opacity, scale }}
+          className="container mx-auto px-4 z-10"
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center"
+          >
+            <motion.div
+              className="inline-block"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <h1 className="text-7xl md:text-9xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-cyan-500">
+                PeerPulse
+              </h1>
+            </motion.div>
+            <motion.p 
+              className="text-2xl md:text-3xl text-purple-200 mb-8 font-light tracking-wider"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              Level Up Your Learning Journey with Peer Power! 🚀
+            </motion.p>
+            <motion.div 
+              className="flex flex-col sm:flex-row gap-6 justify-center items-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <Link to={user ? "/dashboard" : "/auth"}>
+                <motion.button
+                  whileHover={{ 
+                    scale: 1.05,
+                    boxShadow: "0 0 30px rgba(147, 51, 234, 0.5)",
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-8 py-4 rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-cyan-500 text-white font-semibold text-lg tracking-wider relative overflow-hidden group cyberpunk-button"
+                >
+                  <span className="relative z-10">{user ? "Go to Dashboard" : "Start Learning Now!"}</span>
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-cyan-500 via-pink-500 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    initial={false}
+                    animate={{ x: ['-100%', '100%'] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  />
+                </motion.button>
               </Link>
-              <Button variant="outline" size="lg" className="hover:scale-105 transition-transform">
-                Watch Demo
-              </Button>
-            </div>
-          </div>
-          
-          <div className="mt-16 flex justify-center">
-            <ArrowDown className="h-6 w-6 text-muted-foreground animate-bounce" />
-          </div>
-        </div>
+              <motion.button
+                whileHover={{ 
+                  scale: 1.05,
+                  boxShadow: "0 0 20px rgba(147, 51, 234, 0.3)",
+                }}
+                whileTap={{ scale: 0.95 }}
+                className="px-8 py-4 rounded-full border-2 border-purple-500/30 text-purple-200 font-semibold text-lg tracking-wider hover:bg-purple-500/10 transition-all duration-300"
+                onClick={() => scrollToSection('features')}
+              >
+                Explore More
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        </motion.div>
+
+        <motion.div
+          animate={{ y: [0, 10, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
+        >
+          <ArrowDown className="h-8 w-8 text-purple-400/50" />
+        </motion.div>
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Everything you need for <span className="gradient-text">healthy teams</span>
+      <motion.section 
+        id="features"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8 }}
+        className="py-32 relative"
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-black via-purple-900/10 to-black" />
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-20"
+          >
+            <h2 className="text-5xl font-bold mb-6 cyberpunk-text">
+              Why Choose PeerPulse?
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Built for student teams and project groups who want to grow together through honest, constructive feedback.
+            <p className="text-xl text-purple-200/80 max-w-2xl mx-auto font-light tracking-wider">
+              Join the next generation of learners and transform your educational journey
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <Card key={index} className="card-hover border-0 shadow-lg">
-                  <CardContent className="p-6 text-center">
-                    <div className="w-16 h-16 gradient-bg rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Icon className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
-                    <p className="text-muted-foreground">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                title: 'Smart Peer Matching',
+                description: 'Get matched with the perfect study buddies based on your learning style and goals',
+                icon: Brain,
+                gradient: 'from-purple-600 to-pink-500',
+              },
+              {
+                title: 'Real-time Feedback',
+                description: 'Give and receive instant feedback to improve together',
+                icon: MessageSquare,
+                gradient: 'from-pink-500 to-cyan-500',
+              },
+              {
+                title: 'Gamified Learning',
+                description: 'Earn points, badges, and level up as you learn and help others',
+                icon: Rocket,
+                gradient: 'from-cyan-500 to-purple-600',
+              },
+            ].map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.2 }}
+                whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                className="group relative"
+              >
+                <div 
+                  className={`absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-xl blur-xl bg-gradient-to-br ${feature.gradient}`}
+                />
+                <div className="p-8 rounded-xl bg-black/50 backdrop-blur-sm border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300 cyberpunk-card">
+                  <div 
+                    className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 transform group-hover:scale-110 transition-transform duration-300 bg-gradient-to-r ${feature.gradient}`}
+                  >
+                    <feature.icon className="h-10 w-10 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-semibold mb-4 text-purple-200">{feature.title}</h3>
+                  <p className="text-purple-200/70 font-light tracking-wide">{feature.description}</p>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* Stats Section */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold gradient-text mb-2">10k+</div>
-              <div className="text-lg text-muted-foreground">Feedback Sessions</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold gradient-text mb-2">500+</div>
-              <div className="text-lg text-muted-foreground">Active Teams</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold gradient-text mb-2">98%</div>
-              <div className="text-lg text-muted-foreground">Satisfaction Rate</div>
-            </div>
+      {/* How It Works Section */}
+      <motion.section 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8 }}
+        className="py-32 relative"
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-black via-purple-900/10 to-black" />
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-20"
+          >
+            <h2 className="text-5xl font-bold mb-6 cyberpunk-text">
+              How It Works
+            </h2>
+            <p className="text-xl text-purple-200/80 max-w-2xl mx-auto font-light tracking-wider">
+              Three simple steps to start your peer learning journey
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                step: '1',
+                title: 'Create Your Profile',
+                description: 'Set up your learning preferences and goals',
+                icon: UserPlus,
+                gradient: 'from-purple-600 to-pink-500',
+              },
+              {
+                step: '2',
+                title: 'Find Your Peers',
+                description: 'Get matched with like-minded learners',
+                icon: Users,
+                gradient: 'from-pink-500 to-cyan-500',
+              },
+              {
+                step: '3',
+                title: 'Start Learning',
+                description: 'Collaborate, give feedback, and grow together',
+                icon: Zap,
+                gradient: 'from-cyan-500 to-purple-600',
+              },
+            ].map((step, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.2 }}
+                className="relative"
+              >
+                <div className="p-8 rounded-xl bg-black/50 backdrop-blur-sm border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300 cyberpunk-card">
+                  <div className={`w-16 h-16 rounded-full bg-gradient-to-r ${step.gradient} flex items-center justify-center mb-6 mx-auto`}>
+                    <span className="text-2xl font-bold text-white">{step.step}</span>
+                  </div>
+                  <h3 className="text-2xl font-semibold mb-4 text-center text-purple-200">{step.title}</h3>
+                  <p className="text-purple-200/70 text-center font-light tracking-wide">{step.description}</p>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
-      </section>
+      </motion.section>
+
+      {/* Testimonials Section */}
+      <motion.section 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8 }}
+        className="py-32 relative"
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-black via-purple-900/10 to-black" />
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-20"
+          >
+            <h2 className="text-5xl font-bold mb-6 cyberpunk-text">
+              What Our Learners Say
+            </h2>
+            <p className="text-xl text-purple-200/80 max-w-2xl mx-auto font-light tracking-wider">
+              Join thousands of satisfied students who transformed their learning experience
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                quote: "PeerPulse made learning fun and engaging. I've improved my grades and made amazing friends!",
+                author: "Sarah, 16",
+                role: "High School Student",
+                icon: Sparkles,
+                gradient: 'from-purple-600 to-pink-500',
+              },
+              {
+                quote: "The peer feedback system is incredible. It's like having a study group that's always available!",
+                author: "Mike, 17",
+                role: "College Prep Student",
+                icon: Award,
+                gradient: 'from-pink-500 to-cyan-500',
+              },
+              {
+                quote: "I love how easy it is to find study partners. The matching system is spot on!",
+                author: "Emma, 15",
+                role: "High School Student",
+                icon: Heart,
+                gradient: 'from-cyan-500 to-purple-600',
+              },
+            ].map((testimonial, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.2 }}
+                className="p-8 rounded-xl bg-black/50 backdrop-blur-sm border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300 cyberpunk-card"
+              >
+                <div className={`w-16 h-16 rounded-full bg-gradient-to-r ${testimonial.gradient} flex items-center justify-center mb-6`}>
+                  <testimonial.icon className="h-8 w-8 text-white" />
+                </div>
+                <p className="text-lg mb-6 italic text-purple-200/90 font-light tracking-wide">"{testimonial.quote}"</p>
+                <div className="font-semibold text-purple-200">{testimonial.author}</div>
+                <div className="text-sm text-purple-200/70">{testimonial.role}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
 
       {/* CTA Section */}
-      <section className="py-24 gradient-bg">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
-            Ready to build stronger teams?
-          </h2>
-          <p className="text-xl text-white/90 mb-8">
-            Join thousands of teams already using PeerPulse to create more connected, productive working relationships.
-          </p>
-          <Link to="/auth">
-            <Button size="lg" className="bg-white text-primary hover:bg-gray-100">
-              Start Your Free Trial
-            </Button>
-          </Link>
+      <motion.section 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8 }}
+        className="py-32 relative"
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-black via-purple-900/20 to-black" />
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center max-w-3xl mx-auto"
+          >
+            <h2 className="text-5xl font-bold mb-6 cyberpunk-text">
+              Ready to Transform Your Learning Experience?
+            </h2>
+            <p className="text-xl text-purple-200/80 mb-12 font-light tracking-wider">
+              Join thousands of students who are already learning smarter with PeerPulse
+            </p>
+            <Link to={user ? "/dashboard" : "/auth"}>
+              <motion.button
+                whileHover={{ 
+                  scale: 1.05,
+                  boxShadow: "0 0 30px rgba(147, 51, 234, 0.5)",
+                }}
+                whileTap={{ scale: 0.95 }}
+                className="px-12 py-5 rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-cyan-500 text-white font-semibold text-xl tracking-wider relative overflow-hidden group cyberpunk-button"
+              >
+                <span className="relative z-10">{user ? "Go to Dashboard" : "Start Learning Now!"}</span>
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-cyan-500 via-pink-500 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  initial={false}
+                  animate={{ x: ['-100%', '100%'] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                />
+              </motion.button>
+            </Link>
+          </motion.div>
         </div>
-      </section>
-    </div>
+      </motion.section>
+
+      {/* Footer */}
+      <footer className="py-12 relative border-t border-purple-500/20">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+            <div className="text-purple-200/60 text-sm">
+              © 2024 PeerPulse. All rights reserved.
+            </div>
+            <div className="flex gap-6">
+              {[
+                { icon: Github, href: "#", label: "GitHub" },
+                { icon: Linkedin, href: "#", label: "LinkedIn" },
+                { icon: Twitter, href: "#", label: "Twitter" },
+                { icon: Instagram, href: "#", label: "Instagram" },
+              ].map((social, index) => (
+                <motion.a
+                  key={index}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ 
+                    scale: 1.1,
+                    color: "rgb(147, 51, 234)",
+                  }}
+                  className="text-purple-200/60 hover:text-purple-400 transition-colors duration-300"
+                >
+                  <social.icon className="h-6 w-6" />
+                  <span className="sr-only">{social.label}</span>
+                </motion.a>
+              ))}
+            </div>
+          </div>
+        </div>
+      </footer>
+    </main>
   );
 };
 

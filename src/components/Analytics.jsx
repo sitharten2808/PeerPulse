@@ -157,11 +157,11 @@ const Analytics = () => {
       </div>
 
       <Tabs defaultValue="sentiment" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="sentiment">Sentiment Analysis</TabsTrigger>
-          <TabsTrigger value="themes">Common Themes</TabsTrigger>
-          <TabsTrigger value="radar">Skills Radar</TabsTrigger>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
+        <TabsList className="flex w-full">
+          <TabsTrigger value="sentiment" className="flex-1">Sentiment Analysis</TabsTrigger>
+          <TabsTrigger value="themes" className="flex-1">Common Themes</TabsTrigger>
+          <TabsTrigger value="radar" className="flex-1">Skills Radar</TabsTrigger>
+          <TabsTrigger value="trends" className="flex-1">Trends</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sentiment">

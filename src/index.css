@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,77 +6,95 @@
 
 @layer base {
   :root {
-    --background: 255 255 255;
-    --foreground: 15 23 42;
+    /* Light mode - vibrant, energetic colors */
+    --background: 0 0% 100%;
+    --foreground: 270 100% 10%;
 
-    --card: 255 255 255;
-    --card-foreground: 15 23 42;
+    --card: 0 0% 98%;
+    --card-foreground: 270 100% 10%;
 
-    --popover: 255 255 255;
-    --popover-foreground: 15 23 42;
+    --popover: 0 0% 98%;
+    --popover-foreground: 270 100% 10%;
 
-    --primary: 99 102 241;
-    --primary-foreground: 255 255 255;
+    --primary: 270 100% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 241 245 249;
-    --secondary-foreground: 51 65 85;
+    --secondary: 270 100% 90%;
+    --secondary-foreground: 270 100% 20%;
 
-    --muted: 248 250 252;
-    --muted-foreground: 100 116 139;
+    --muted: 270 100% 95%;
+    --muted-foreground: 270 100% 40%;
 
-    --accent: 245 208 254;
-    --accent-foreground: 107 33 168;
+    --accent: 320 100% 60%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 239 68 68;
-    --destructive-foreground: 255 255 255;
+    --destructive: 0 100% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 226 232 240;
-    --input: 226 232 240;
-    --ring: 99 102 241;
+    --border: 270 100% 90%;
+    --input: 270 100% 90%;
+    --ring: 270 100% 60%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    /* Custom PeerPulse colors */
-    --pulse-purple: 139 92 246;
-    --pulse-blue: 59 130 246;
-    --pulse-cyan: 6 182 212;
+    /* Custom PeerPulse colors - vibrant, energetic palette */
+    --pulse-purple: 270 100% 60%;
+    --pulse-blue: 200 100% 60%;
+    --pulse-cyan: 180 100% 60%;
+    --pulse-pink: 320 100% 60%;
+    --pulse-orange: 249 115 22;  /* Bright orange */
+    --pulse-green: 34 197 94;    /* Vibrant green */
     --success: 34 197 94;
     --warning: 251 191 36;
+
+    /* Light mode purple gradients */
+    --purple-light: 270 100% 85%;  /* Light lavender */
+    --purple-medium: 270 100% 75%; /* Medium lavender */
+    --purple-dark: 270 100% 65%;   /* Deep lavender */
   }
 
   .dark {
-    --background: 2 6 23;
-    --foreground: 248 250 252;
+    /* Dark mode - neon, cyberpunk-inspired colors */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
 
-    --card: 15 23 42;
-    --card-foreground: 248 250 252;
+    --card: 0 0% 3%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 15 23 42;
-    --popover-foreground: 248 250 252;
+    --popover: 0 0% 3%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 129 140 248;
-    --primary-foreground: 15 23 42;
+    --primary: 270 100% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 30 41 59;
-    --secondary-foreground: 226 232 240;
+    --secondary: 270 100% 20%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 30 41 59;
-    --muted-foreground: 148 163 184;
+    --muted: 270 100% 10%;
+    --muted-foreground: 270 100% 80%;
 
-    --accent: 88 28 135;
-    --accent-foreground: 248 250 252;
+    --accent: 320 100% 50%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 239 68 68;
-    --destructive-foreground: 248 250 252;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 30 41 59;
-    --input: 30 41 59;
-    --ring: 129 140 248;
+    --border: 270 100% 20%;
+    --input: 270 100% 20%;
+    --ring: 270 100% 50%;
 
-    /* Dark mode custom colors */
-    --pulse-purple: 167 139 250;
-    --pulse-blue: 96 165 250;
-    --pulse-cyan: 34 211 238;
+    /* Dark mode custom colors - neon, cyberpunk palette */
+    --pulse-purple: 270 100% 50%;
+    --pulse-blue: 200 100% 50%;
+    --pulse-cyan: 180 100% 50%;
+    --pulse-pink: 320 100% 50%;
+    --pulse-orange: 251 146 60;   /* Neon orange */
+    --pulse-green: 74 222 128;    /* Neon green */
+
+    /* Dark mode purple gradients (iPhone 14 Pro inspired) */
+    --purple-light: 270 100% 35%;  /* Deep purple */
+    --purple-medium: 270 100% 25%; /* Darker purple */
+    --purple-dark: 270 100% 15%;   /* Deepest purple */
   }
 }
 
@@ -87,7 +104,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground antialiased;
   }
 
   html {
@@ -97,11 +114,11 @@
 
 @layer components {
   .gradient-bg {
-    @apply bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500;
+    @apply bg-gradient-to-br from-[hsl(var(--pulse-purple))] via-[hsl(var(--pulse-blue))] to-[hsl(var(--pulse-cyan))];
   }
   
   .gradient-text {
-    @apply bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-[hsl(var(--pulse-purple))] via-[hsl(var(--pulse-blue))] to-[hsl(var(--pulse-cyan))] bg-clip-text text-transparent;
   }
   
   .card-hover {
@@ -109,6 +126,380 @@
   }
   
   .pulse-shadow {
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 20px hsl(var(--pulse-purple) / 0.3);
+  }
+
+  .neon-glow {
+    box-shadow: 0 0 10px hsl(var(--pulse-purple) / 0.5),
+                0 0 20px hsl(var(--pulse-blue) / 0.3),
+                0 0 30px hsl(var(--pulse-cyan) / 0.2);
+  }
+
+  .cyberpunk-text {
+    @apply font-bold tracking-tight;
+    text-shadow: 
+      0 0 5px hsl(var(--primary)),
+      0 0 10px hsl(var(--primary)),
+      0 0 20px hsl(var(--primary));
+  }
+
+  .cyberpunk-button {
+    @apply relative overflow-hidden;
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+  }
+
+  .cyberpunk-button::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(
+      45deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%
+    );
+  }
+
+  .cyberpunk-button:hover::before {
+    @apply opacity-100;
+  }
+
+  .cyberpunk-card {
+    @apply relative overflow-hidden rounded-lg border border-purple-500/20 bg-card/50 backdrop-blur-lg;
+    box-shadow: 
+      0 0 10px hsl(var(--primary) / 0.2),
+      0 0 20px hsl(var(--primary) / 0.1);
+  }
+
+  .cyberpunk-card::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(
+      45deg,
+      transparent 0%,
+      hsl(var(--primary) / 0.1) 50%,
+      transparent 100%
+    );
+  }
+
+  .cyberpunk-card:hover::before {
+    @apply opacity-100;
+  }
+
+  .cyberpunk-input {
+    @apply rounded-lg border border-purple-500/20 bg-card/50 backdrop-blur-lg px-4 py-2;
+    box-shadow: 
+      0 0 5px hsl(var(--primary) / 0.2),
+      inset 0 0 5px hsl(var(--primary) / 0.1);
+  }
+
+  .cyberpunk-input:focus {
+    @apply outline-none ring-2 ring-purple-500/50;
+    box-shadow: 
+      0 0 10px hsl(var(--primary) / 0.3),
+      inset 0 0 5px hsl(var(--primary) / 0.2);
+  }
+}
+
+@layer utilities {
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[hsl(var(--purple-light))] via-[hsl(var(--purple-medium))] to-[hsl(var(--purple-dark))];
+  }
+
+  .neon-glow {
+    @apply shadow-[0_0_15px_hsl(var(--purple-light)/0.3)];
+  }
+
+  .card-hover {
+    @apply hover:border-[hsl(var(--purple-light))/0.2] hover:shadow-[0_0_20px_hsl(var(--purple-light)/0.1)];
+  }
+
+  .cyberpunk-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-cyan-500 animate-gradient-x;
+  }
+
+  .cyberpunk-button {
+    @apply relative overflow-hidden transition-all duration-300;
+    box-shadow: 0 0 15px rgba(147, 51, 234, 0.3);
+  }
+
+  .cyberpunk-button::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-cyan-500 via-pink-500 to-purple-600 opacity-0 transition-opacity duration-300;
+  }
+
+  .cyberpunk-button:hover::before {
+    @apply opacity-100;
+  }
+
+  .cyberpunk-card {
+    @apply backdrop-blur-sm transition-all duration-300;
+    box-shadow: 0 0 20px rgba(147, 51, 234, 0.1);
+  }
+
+  .cyberpunk-card:hover {
+    box-shadow: 0 0 30px rgba(147, 51, 234, 0.2);
+  }
+}
+
+@keyframes gradient-x {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 8s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #9333ea, #ec4899);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #ec4899, #9333ea);
+}
+
+/* Selection color */
+::selection {
+  background: rgba(147, 51, 234, 0.2);
+  color: #ec4899;
+}
+
+/* Particle Background */
+.particle-background {
+  @apply fixed inset-0 -z-10;
+  background: radial-gradient(
+    circle at center,
+    hsl(var(--background)) 0%,
+    hsl(var(--background) / 0.95) 100%
+  );
+}
+
+.particle {
+  @apply absolute rounded-full;
+  background: linear-gradient(
+    45deg,
+    hsl(var(--primary) / 0.1),
+    hsl(var(--accent) / 0.1)
+  );
+  filter: blur(1px);
+  animation: float 20s infinite linear;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+  }
+  100% {
+    transform: translateY(0) rotate(360deg);
+  }
+}
+
+/* Glowing Effects */
+.glow {
+  @apply relative;
+}
+
+.glow::after {
+  content: '';
+  @apply absolute inset-0 -z-10 blur-xl opacity-50 transition-opacity duration-300;
+  background: radial-gradient(
+    circle at center,
+    hsl(var(--primary) / 0.5),
+    transparent 70%
+  );
+}
+
+.glow:hover::after {
+  @apply opacity-75;
+}
+
+/* Neon Border */
+.neon-border {
+  @apply relative;
+}
+
+.neon-border::before {
+  content: '';
+  @apply absolute -inset-0.5 rounded-lg bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 opacity-50 blur transition-opacity duration-300;
+}
+
+.neon-border:hover::before {
+  @apply opacity-75;
+}
+
+/* Cyberpunk Grid */
+.cyberpunk-grid {
+  @apply relative;
+  background-image: 
+    linear-gradient(hsl(var(--primary) / 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--primary) / 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Glitch Effect */
+.glitch {
+  @apply relative;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  @apply absolute inset-0;
+  background: hsl(var(--background));
+}
+
+.glitch::before {
+  @apply -left-1 text-purple-400;
+  animation: glitch-1 2s infinite linear alternate-reverse;
+}
+
+.glitch::after {
+  @apply -right-1 text-pink-400;
+  animation: glitch-2 3s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-1 {
+  0% {
+    clip-path: inset(20% 0 30% 0);
+  }
+  20% {
+    clip-path: inset(60% 0 10% 0);
+  }
+  40% {
+    clip-path: inset(40% 0 50% 0);
+  }
+  60% {
+    clip-path: inset(80% 0 5% 0);
+  }
+  80% {
+    clip-path: inset(10% 0 70% 0);
+  }
+  100% {
+    clip-path: inset(30% 0 20% 0);
+  }
+}
+
+@keyframes glitch-2 {
+  0% {
+    clip-path: inset(15% 0 35% 0);
+  }
+  20% {
+    clip-path: inset(55% 0 15% 0);
+  }
+  40% {
+    clip-path: inset(45% 0 45% 0);
+  }
+  60% {
+    clip-path: inset(75% 0 10% 0);
+  }
+  80% {
+    clip-path: inset(15% 0 65% 0);
+  }
+  100% {
+    clip-path: inset(25% 0 25% 0);
+  }
+}
+
+/* Main content spacing */
+main {
+  @apply pt-20; /* Add padding-top to account for fixed navbar */
+}
+
+/* Card styles */
+.card {
+  @apply rounded-lg border bg-card p-6 shadow-sm transition-colors duration-300;
+}
+
+.card:hover {
+  @apply border-primary/50;
+}
+
+/* Button styles */
+.button {
+  @apply inline-flex items-center justify-center rounded-full px-6 py-2 font-semibold transition-colors duration-300;
+}
+
+.button-primary {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90;
+}
+
+.button-secondary {
+  @apply bg-secondary text-secondary-foreground hover:bg-secondary/90;
+}
+
+/* Input styles */
+.input {
+  @apply rounded-lg border bg-card px-4 py-2 transition-colors duration-300;
+}
+
+.input:focus {
+  @apply outline-none ring-2 ring-ring;
+}
+
+/* Grid styles */
+.grid-pattern {
+  @apply relative;
+  background-image: 
+    linear-gradient(hsl(var(--primary) / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--primary) / 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Section styles */
+.section {
+  @apply py-16;
+}
+
+.section-title {
+  @apply text-3xl font-bold mb-8;
+}
+
+/* Container styles */
+.container {
+  @apply mx-auto px-4 max-w-7xl;
+}
+
+/* Responsive spacing */
+@media (min-width: 768px) {
+  .section {
+    @apply py-24;
+  }
+  
+  .section-title {
+    @apply text-4xl;
   }
 }
