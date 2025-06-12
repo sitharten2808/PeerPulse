@@ -19,7 +19,7 @@ interface Task {
   id: number;
   title: string;
   description: string;
-  assignedTo: string;
+  assignedToId: string; // Changed from assignedTo
   status: 'pending' | 'completed';
   submission: {
     date: string;
@@ -70,7 +70,7 @@ const AssignmentManagement: React.FC = () => {
           id: 1,
           title: 'Review Frontend Design',
           description: 'Review and provide feedback on the UI/UX design',
-          assignedTo: 'John Doe',
+          assignedToId: '1', // Was 'John Doe'
           status: 'completed',
           submission: {
             date: '2024-06-10',
@@ -82,7 +82,7 @@ const AssignmentManagement: React.FC = () => {
           id: 2,
           title: 'Code Review',
           description: 'Review the implementation code',
-          assignedTo: 'Jane Smith',
+          assignedToId: '2', // Was 'Jane Smith'
           status: 'pending',
           submission: null
         }
@@ -111,9 +111,23 @@ const AssignmentManagement: React.FC = () => {
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
-    assignedTo: '',
+    assignedToId: '', // Changed from assignedTo
     dueDate: ''
   });
+
+  // Initialize a counter for unique task IDs
+  const [nextTaskId, setNextTaskId] = useState(() => {
+    let maxId = 0;
+    assignments.forEach(assignment => {
+      assignment.tasks.forEach(task => {
+        if (task.id > maxId) {
+          maxId = task.id;
+        }
+      });
+    });
+    return maxId + 1;
+  });
+
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
 
@@ -145,26 +159,36 @@ const AssignmentManagement: React.FC = () => {
 
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('selectedAssignment:', selectedAssignment);
     if (!selectedAssignment) return;
+
+    const taskToAdd = {
+      id: nextTaskId, // Use the global unique ID
+      ...newTask,
+      status: 'pending' as const,
+      submission: null
+    };
+    console.log('newTask object:', taskToAdd);
+    setNextTaskId(prevId => prevId + 1); // Increment for the next task
 
     const updatedAssignments = assignments.map(assignment => {
       if (assignment.id === selectedAssignment.id) {
         return {
           ...assignment,
-          tasks: [...assignment.tasks, {
-            id: assignment.tasks.length + 1,
-            ...newTask,
-            status: 'pending' as const,
-            submission: null
-          }]
+          tasks: [...assignment.tasks, taskToAdd]
         };
       }
       return assignment;
     });
+    console.log('updatedAssignments array:', updatedAssignments);
     setAssignments(updatedAssignments);
-    setNewTask({ title: '', description: '', assignedTo: '', dueDate: '' });
+    setNewTask({ title: '', description: '', assignedToId: '', dueDate: '' }); // Changed from assignedTo
     setShowTaskForm(false);
   };
+
+  React.useEffect(() => {
+    console.log('assignments state updated:', assignments);
+  }, [assignments]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -175,7 +199,10 @@ const AssignmentManagement: React.FC = () => {
     }
   };
 
-  const isInstructor = true; // Demo: assume instructor for now
+  // Determine if the current user is an instructor
+  // Assumes user with id '1' is an instructor.
+  // Handles user possibly being null (defaults to non-instructor).
+  const isInstructor = user?.id === '1';
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -290,166 +317,194 @@ const AssignmentManagement: React.FC = () => {
               <div className="mt-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold">Tasks</h3>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setSelectedAssignment(assignment)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Task
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add New Task</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleCreateTask} className="space-y-4">
-                        <div>
-                          <Label htmlFor="taskTitle">Task Title</Label>
-                          <Input
-                            id="taskTitle"
-                            value={newTask.title}
-                            onChange={(e) => setNewTask({...newTask, title: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="taskDescription">Description</Label>
-                          <Textarea
-                            id="taskDescription"
-                            value={newTask.description}
-                            onChange={(e) => setNewTask({...newTask, description: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="taskAssignedTo">Assign To</Label>
-                          <select
-                            id="taskAssignedTo"
-                            value={newTask.assignedTo}
-                            onChange={(e) => setNewTask({...newTask, assignedTo: e.target.value})}
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            required
-                          >
-                            <option value="">Select a team member</option>
-                            {teamMembers.map((member) => (
-                              <option key={member.id} value={member.name}>
-                                {member.name} - {member.role}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <Label htmlFor="taskDueDate">Due Date</Label>
-                          <Input
-                            id="taskDueDate"
-                            type="date"
-                            value={newTask.dueDate}
-                            onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <Button type="submit">Create Task</Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                  {isInstructor && (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            console.log('Setting selectedAssignment:', assignment);
+                            setSelectedAssignment(assignment);
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Task
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add New Task</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleCreateTask} className="space-y-4">
+                          <div>
+                            <Label htmlFor="taskTitle">Task Title</Label>
+                            <Input
+                              id="taskTitle"
+                              value={newTask.title}
+                              onChange={(e) => setNewTask({...newTask, title: e.target.value})}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="taskDescription">Description</Label>
+                            <Textarea
+                              id="taskDescription"
+                              value={newTask.description}
+                              onChange={(e) => setNewTask({...newTask, description: e.target.value})}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="taskAssignedToId">Assign To</Label>
+                            <select
+                              id="taskAssignedToId"
+                              value={newTask.assignedToId} // Changed from assignedTo
+                              onChange={(e) => setNewTask({...newTask, assignedToId: e.target.value})} // Changed from assignedTo
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                              required
+                            >
+                              <option value="">Select a team member</option>
+                              {teamMembers.map((member) => (
+                                <option key={member.id} value={member.id.toString()}> {/* Value is now member.id */}
+                                  {member.name} - {member.role}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <Label htmlFor="taskDueDate">Due Date</Label>
+                            <Input
+                              id="taskDueDate"
+                              type="date"
+                              value={newTask.dueDate}
+                              onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
+                              required
+                            />
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <Button type="submit">Create Task</Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </div>
 
                 <div className="space-y-4">
-  {assignment.tasks.map((task) => (
-    <Card key={task.id}>
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <h4 className="font-medium">{task.title}</h4>
-            <p className="text-sm text-muted-foreground">{task.description}</p>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline">{task.assignedTo}</Badge>
-              <Badge variant={task.status === 'completed' ? 'default' : 'secondary'}>
-                {task.status}
-              </Badge>
-            </div>
-          </div>
+                  {(() => {
+                    let tasksToDisplay = assignment.tasks;
+                    if (!isInstructor) {
+                      // Filter by assignedToId and user.id
+                      tasksToDisplay = assignment.tasks.filter(task => task.assignedToId === user?.id);
+                    }
+                    return tasksToDisplay.map((task) => {
+                      // Find team member name for display
+                      const assignedMember = teamMembers.find(member => member.id.toString() === task.assignedToId);
+                      const assignedName = assignedMember?.name || 'Unknown User';
 
-          {task.submission && (
-            <div className="flex flex-col items-end gap-2">
-              {/* View Submission Dialog */}
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    View Submission
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Task Submission</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Submitted Date</Label>
-                      <p>{new Date(task.submission.date).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <Label>Content</Label>
-                      <p className="mt-1">{task.submission.content}</p>
-                    </div>
-                    {task.submission.attachments && (
-                      <div>
-                        <Label>Attachments</Label>
-                        <div className="mt-1">
-                          {task.submission.attachments.map((file, index) => (
-                            <Button key={index} variant="link" className="p-0">
-                              {file}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
+                      return (
+                        <Card key={task.id}>
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-medium">{task.title}</h4>
+                                <p className="text-sm text-muted-foreground">{task.description}</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Badge variant="outline">{assignedName}</Badge> {/* Display name */}
+                                  <Badge variant={task.status === 'completed' ? 'default' : 'secondary'}>
+                                    {task.status}
+                                  </Badge>
+                                </div>
+                              </div>
 
-              {/* Give Feedback Dialog */}
-              <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="secondary" size="sm">
-                    Give Feedback
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Give Feedback</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor={`feedback-${task.id}`}>Your Feedback</Label>
-                      <textarea
-                        id={`feedback-${task.id}`}
-                        className="w-full text-black p-2 border rounded-md"
-                        rows={4}
-                        placeholder="Write your feedback here..."
-                        value={feedbackText}
-                        onChange={(e) => setFeedbackText(e.target.value)}
-                      ></textarea>
-                    </div>
-                    <div className="flex justify-end">
-                      <Button type="submit" onClick={handleFeedbackSubmit}>Submit Feedback</Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  ))}
-</div>
+                              {task.submission && (
+                                <div className="flex flex-col items-end gap-2">
+                                  {/* View Submission Dialog */}
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button variant="outline" size="sm">
+                                        View Submission
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Task Submission</DialogTitle>
+                                      </DialogHeader>
+                                      <div className="space-y-4">
+                                        <div>
+                                          <Label>Submitted Date</Label>
+                                          <p>{new Date(task.submission.date).toLocaleDateString()}</p>
+                                        </div>
+                                        <div>
+                                          <Label>Content</Label>
+                                          <p className="mt-1">{task.submission.content}</p>
+                                        </div>
+                                        {task.submission.attachments && (
+                                          <div>
+                                            <Label>Attachments</Label>
+                                            <div className="mt-1">
+                                              {task.submission.attachments.map((file, index) => (
+                                                <Button key={index} variant="link" className="p-0">
+                                                  {file}
+                                                </Button>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
 
+                                  {/* Give Feedback Dialog */}
+                                  {isInstructor && ( // Only instructors can give feedback
+                                    <Dialog open={feedbackOpen && selectedAssignment?.tasks.find(t => t.id === task.id) != null} onOpenChange={(isOpen) => {
+                                      if (isOpen) {
+                                        setSelectedAssignment(assignment);
+                                      }
+                                      setFeedbackOpen(isOpen);
+                                    }}>
+                                      <DialogTrigger asChild>
+                                        <Button variant="secondary" size="sm" onClick={() => {
+                                        }}>
+                                          Give Feedback
+                                        </Button>
+                                      </DialogTrigger>
+                                      <DialogContent>
+                                        <DialogHeader>
+                                          <DialogTitle>Give Feedback for {task.title}</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="space-y-4">
+                                          <div>
+                                            <Label htmlFor={`feedback-${task.id}`}>Your Feedback</Label>
+                                            <textarea
+                                              id={`feedback-${task.id}`}
+                                              className="w-full text-black p-2 border rounded-md"
+                                              rows={4}
+                                              placeholder="Write your feedback here..."
+                                              value={feedbackText}
+                                              onChange={(e) => setFeedbackText(e.target.value)}
+                                            ></textarea>
+                                          </div>
+                                          <div className="flex justify-end">
+                                            <Button type="submit" onClick={() => {
+                                              console.log("Submitting feedback for specific task:", task.id, feedbackText);
+                                              handleFeedbackSubmit();
+                                            }}>Submit Feedback</Button>
+                                          </div>
+                                        </div>
+                                      </DialogContent>
+                                    </Dialog>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    });
+                  })()}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -459,4 +514,4 @@ const AssignmentManagement: React.FC = () => {
   );
 };
 
-export default AssignmentManagement; 
+export default AssignmentManagement;
