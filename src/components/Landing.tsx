@@ -12,7 +12,7 @@ import {
   Smartphone, Rocket, Brain
 } from 'lucide-react';
 
-const Landing: React.FC = () => {
+export function Landing() {
   const { user } = useAuth();
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const { scrollYProgress } = useScroll();
@@ -485,6 +485,4 @@ const Landing: React.FC = () => {
       </footer>
     </main>
   );
-};
-
-export default Landing;
+}

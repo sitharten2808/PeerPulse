@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,14 +7,47 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { TrendingUp, Heart, MessageSquare, BarChart3, Target } from 'lucide-react';
 
-const Analytics = () => {
-  const [feedbackData, setFeedbackData] = useState([]);
-  const [sentimentData, setSentimentData] = useState([]);
-  const [wordCloudData, setWordCloudData] = useState([]);
-  const [radarData, setRadarData] = useState([]);
+interface Feedback {
+  id: number;
+  comment: string;
+  rating: number;
+  category: string;
+  date: string;
+  sentiment?: 'positive' | 'negative' | 'neutral';
+}
+
+interface SentimentData {
+  name: string;
+  value: number;
+  fill: string;
+}
+
+interface WordCloudData {
+  word: string;
+  count: number;
+}
+
+interface RadarData {
+  category: string;
+  score: number;
+  fullMark: number;
+}
+
+interface ChartConfig {
+  [key: string]: {
+    label: string;
+    color: string;
+  };
+}
+
+export function Analytics() {
+  const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);
+  const [sentimentData, setSentimentData] = useState<SentimentData[]>([]);
+  const [wordCloudData, setWordCloudData] = useState<WordCloudData[]>([]);
+  const [radarData, setRadarData] = useState<RadarData[]>([]);
 
   // Mock feedback data - in real app, this would come from API
-  const mockFeedback = [
+  const mockFeedback: Feedback[] = [
     { id: 1, comment: "Great communication skills and always helpful!", rating: 5, category: 'communication', date: '2024-06-01' },
     { id: 2, comment: "Shows strong leadership but could improve on time management.", rating: 4, category: 'leadership', date: '2024-06-02' },
     { id: 3, comment: "Excellent problem-solving abilities and team collaboration.", rating: 5, category: 'teamwork', date: '2024-06-03' },
@@ -25,7 +57,7 @@ const Analytics = () => {
   ];
 
   // Simple sentiment analysis function
-  const analyzeSentiment = (text) => {
+  const analyzeSentiment = (text: string): 'positive' | 'negative' | 'neutral' => {
     const positiveWords = ['great', 'excellent', 'amazing', 'wonderful', 'helpful', 'strong', 'good', 'best', 'outstanding', 'fantastic'];
     const negativeWords = ['bad', 'poor', 'terrible', 'awful', 'weak', 'could improve', 'late', 'slow', 'difficult'];
     
@@ -43,10 +75,10 @@ const Analytics = () => {
   };
 
   // Extract common themes/words
-  const extractThemes = (feedback) => {
+  const extractThemes = (feedback: Feedback[]): WordCloudData[] => {
     const allText = feedback.map(f => f.comment).join(' ').toLowerCase();
     const words = allText.split(/\W+/).filter(word => word.length > 3);
-    const wordCount = {};
+    const wordCount: { [key: string]: number } = {};
     
     words.forEach(word => {
       wordCount[word] = (wordCount[word] || 0) + 1;
@@ -67,8 +99,8 @@ const Analytics = () => {
       sentiment: analyzeSentiment(f.comment)
     }));
     
-    const sentimentCounts = sentiments.reduce((acc, curr) => {
-      acc[curr.sentiment] = (acc[curr.sentiment] || 0) + 1;
+    const sentimentCounts = sentiments.reduce((acc: { [key: string]: number }, curr) => {
+      acc[curr.sentiment!] = (acc[curr.sentiment!] || 0) + 1;
       return acc;
     }, {});
     
@@ -92,7 +124,7 @@ const Analytics = () => {
     ]);
   }, []);
 
-  const chartConfig = {
+  const chartConfig: ChartConfig = {
     positive: { label: "Positive", color: "#22c55e" },
     neutral: { label: "Neutral", color: "#64748b" },
     negative: { label: "Negative", color: "#ef4444" }
@@ -249,7 +281,7 @@ const Analytics = () => {
                     <XAxis dataKey="date" />
                     <YAxis domain={[1, 5]} />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="rating" stroke="#8884d8" strokeWidth={2} />
+                    <Line type="monotone" dataKey="rating" stroke="#8884d8" />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -259,6 +291,4 @@ const Analytics = () => {
       </Tabs>
     </div>
   );
-};
-
-export default Analytics;
+} 

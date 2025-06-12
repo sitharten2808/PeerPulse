@@ -1,25 +1,38 @@
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Slider } from '@/components/ui/slider'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import { BarChart, TrendingUp, Users, Calendar, Heart } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { BarChart, TrendingUp, Users, Calendar, Heart } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+type Team = {
+  id: string
+  name: string
+}
 
-const TeamHealth: React.FC = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export function TeamHealth() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [teams, setTeams] = useState<Team[]>([])
+  const [selectedTeam, setSelectedTeam] = useState<string>('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [responses, setResponses] = useState({
     motivation: [7],
     collaboration: [8],
     workload: [6],
     communication: [9],
     satisfaction: [7],
-  });
+  })
+  const [loading, setLoading] = useState(true)
 
-  const { toast } = useToast();
+  const { toast } = useToast()
 
   const questions = [
     {
@@ -47,56 +60,153 @@ const TeamHealth: React.FC = () => {
       label: 'How satisfied are you with team progress?',
       description: 'Rate overall team performance and achievements',
     },
-  ];
+  ]
 
   const previousWeeks = [
     { week: 'Week 1', motivation: 85, collaboration: 78, workload: 65, communication: 92, satisfaction: 80 },
     { week: 'Week 2', motivation: 82, collaboration: 85, workload: 70, communication: 88, satisfaction: 85 },
     { week: 'Week 3', motivation: 88, collaboration: 82, workload: 68, communication: 90, satisfaction: 82 },
     { week: 'Current', motivation: 87, collaboration: 88, workload: 72, communication: 94, satisfaction: 88 },
-  ];
+  ]
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        // Fetch teams where the user is a member
+        const { data: teamData, error: teamError } = await supabase
+          .from('team_members')
+          .select(`
+            team:teams (
+              id,
+              name
+            )
+          `)
+          .eq('user_id', user?.id)
+
+        if (teamError) throw teamError
+
+        const userTeams = teamData?.map(item => ({
+          id: item.team[0].id,
+          name: item.team[0].name
+        })) || []
+        setTeams(userTeams)
+
+        // Set the first team as selected by default
+        if (userTeams.length > 0) {
+          setSelectedTeam(userTeams[0].id)
+        }
+      } catch (error) {
+        console.error('Error fetching teams:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user) {
+      fetchTeams()
+    }
+  }, [user])
 
   const handleSliderChange = (questionId: string, value: number[]) => {
     setResponses(prev => ({
       ...prev,
       [questionId]: value,
-    }));
-  };
+    }))
+  }
 
   const handleSubmit = async () => {
-    setIsSubmitting(true);
+    if (!selectedTeam) {
+      toast({
+        title: "Error",
+        description: "Please select a team first",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsSubmitting(true)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast({
-      title: "Health check submitted!",
-      description: "Thank you for your feedback. Results will be compiled anonymously.",
-    });
-    
-    setIsSubmitting(false);
-  };
+    try {
+      // Save the health check data to Supabase
+      const { error } = await supabase
+        .from('team_health_checks')
+        .insert([
+          {
+            team_id: selectedTeam,
+            user_id: user?.id,
+            motivation: responses.motivation[0],
+            collaboration: responses.collaboration[0],
+            workload: responses.workload[0],
+            communication: responses.communication[0],
+            satisfaction: responses.satisfaction[0]
+          }
+        ])
+
+      if (error) throw error
+
+      toast({
+        title: "Health check submitted!",
+        description: "Thank you for your feedback. Results will be compiled anonymously.",
+      })
+    } catch (error) {
+      console.error('Error submitting health check:', error)
+      toast({
+        title: "Error",
+        description: "Failed to submit health check. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const getScoreColor = (score: number) => {
-    if (score >= 8) return 'text-green-600 bg-green-100';
-    if (score >= 6) return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
-  };
+    if (score >= 8) return 'text-green-600 bg-green-100'
+    if (score >= 6) return 'text-yellow-600 bg-yellow-100'
+    return 'text-red-600 bg-red-100'
+  }
 
   const getScoreLabel = (score: number) => {
-    if (score >= 9) return 'Excellent';
-    if (score >= 7) return 'Good';
-    if (score >= 5) return 'Average';
-    return 'Needs Attention';
-  };
+    if (score >= 9) return 'Excellent'
+    if (score >= 7) return 'Good'
+    if (score >= 5) return 'Average'
+    return 'Needs Attention'
+  }
+
+  if (loading) {
+    return <div>Loading...</div>
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Team Health Check</h1>
-        <p className="text-muted-foreground">
-          Weekly pulse survey to track team wellbeing and identify areas for improvement.
-        </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-24">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Team Health Check</h1>
+          <p className="text-muted-foreground">
+            Weekly pulse survey to track team wellbeing and identify areas for improvement.
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select a team" />
+            </SelectTrigger>
+            <SelectContent>
+              {teams.map((team) => (
+                <SelectItem key={team.id} value={team.id}>
+                  {team.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button 
+            onClick={() => navigate('/teams')}
+            className="flex items-center gap-2"
+          >
+            <Users className="h-4 w-4" />
+            Manage Team
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -142,7 +252,7 @@ const TeamHealth: React.FC = () => {
               <Button 
                 onClick={handleSubmit} 
                 className="w-full" 
-                disabled={isSubmitting}
+                disabled={isSubmitting || !selectedTeam}
               >
                 {isSubmitting ? 'Submitting...' : 'Submit Health Check'}
               </Button>
@@ -226,7 +336,5 @@ const TeamHealth: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
-
-export default TeamHealth;
+  )
+}

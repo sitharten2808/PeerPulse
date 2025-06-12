@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Star, Heart, Users, Send } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Star, Heart, Users, Send } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 type Team = {
   id: string
@@ -25,11 +25,10 @@ type TeamMember = {
   user: {
     id: string
     email: string
-    name: string
   }
 }
 
-export function FeedbackForm() {
+export function GiveFeedback() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [teams, setTeams] = useState<Team[]>([])
@@ -85,8 +84,7 @@ export function FeedbackForm() {
             role,
             user:users!team_members_user_id_fkey (
               id,
-              email,
-              name
+              email
             )
           `)
           .eq('team_id', teamId)
@@ -134,7 +132,7 @@ export function FeedbackForm() {
 
     try {
       const { error } = await supabase
-        .from('team_feedback')
+        .from('feedback')
         .insert({
           team_id: selectedTeam,
           to_user_id: selectedMember,
@@ -197,21 +195,23 @@ export function FeedbackForm() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <Label>Select Team *</Label>
-                  <Select value={selectedTeam} onValueChange={(value) => {
-                    setSelectedTeam(value)
-                    setSelectedMember('')
-                  }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a team" />
-                    </SelectTrigger>
-                    <SelectContent>
+                  <ScrollArea className="h-20 w-full rounded-md border p-2">
+                    <div className="flex gap-2">
                       {teams.map((team) => (
-                        <SelectItem key={team.id} value={team.id}>
+                        <Badge
+                          key={team.id}
+                          variant={selectedTeam === team.id ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() => {
+                            setSelectedTeam(team.id)
+                            setSelectedMember('')
+                          }}
+                        >
                           {team.name}
-                        </SelectItem>
+                        </Badge>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </div>
+                  </ScrollArea>
                 </div>
 
                 {selectedTeam && (
@@ -226,10 +226,10 @@ export function FeedbackForm() {
                           <SelectItem key={member.id} value={member.user_id}>
                             <div className="flex items-center gap-2">
                               <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                                {member.user.name?.[0]?.toUpperCase() || member.user.email[0].toUpperCase()}
+                                {member.user.email[0].toUpperCase()}
                               </div>
                               <div>
-                                <div className="font-medium">{member.user.name || member.user.email}</div>
+                                <div className="font-medium">{member.user.email}</div>
                                 <div className="text-sm text-muted-foreground">{member.role}</div>
                               </div>
                             </div>
@@ -325,10 +325,10 @@ export function FeedbackForm() {
               {selectedTeam && teamMembers[selectedTeam]?.map((member) => (
                 <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg border">
                   <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-medium">
-                    {member.user.name?.[0]?.toUpperCase() || member.user.email[0].toUpperCase()}
+                    {member.user.email[0].toUpperCase()}
                   </div>
                   <div>
-                    <div className="font-medium">{member.user.name || member.user.email}</div>
+                    <div className="font-medium">{member.user.email}</div>
                     <div className="text-sm text-muted-foreground">{member.role}</div>
                   </div>
                 </div>
@@ -363,4 +363,4 @@ export function FeedbackForm() {
       </div>
     </div>
   )
-}
+} 

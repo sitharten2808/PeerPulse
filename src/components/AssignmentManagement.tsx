@@ -1,462 +1,464 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, FileText, Users, Plus, Download } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { supabase, Team, Assignment, User } from '@/lib/supabase';
+import { Plus, Trash2, Edit2 } from 'lucide-react';
+
+interface TaskInput {
+  assigned_to: string;
+  description: string;
+  due_date: string;
+}
 
 interface Task {
-  id: number;
-  title: string;
-  description: string;
-  assignedTo: string;
-  status: 'pending' | 'completed';
-  submission: {
-    date: string;
-    content: string;
-    attachments: string[];
-  } | null;
-}
-
-interface Assignment {
-  id: number;
-  title: string;
-  description: string;
-  dueDate: string;
-  assignedTo: string;
-  status: 'active' | 'draft' | 'closed';
-  submissions: number;
-  totalTeams: number;
-  tasks: Task[];
-}
-
-interface TeamMember {
-  id: number;
-  name: string;
-  role: string;
-}
-
-interface User {
   id: string;
-  name: string;
-  email: string;
-  avatar?: string;
+  assignment_id: string;
+  assigned_to: string;
+  status: string;
+  description: string;
+  user?: { id: string; name: string; email: string };
 }
 
-const AssignmentManagement: React.FC = () => {
+export function AssignmentManagement() {
   const { user } = useAuth();
-  const [assignments, setAssignments] = useState<Assignment[]>([
-    {
-      id: 1,
-      title: 'Project Proposal Review',
-      description: 'Review and provide feedback on team project proposals',
-      dueDate: '2024-06-15',
-      assignedTo: 'John Doe',
-      status: 'active',
-      submissions: 5,
-      totalTeams: 8,
-      tasks: [
-        {
-          id: 1,
-          title: 'Review Frontend Design',
-          description: 'Review and provide feedback on the UI/UX design',
-          assignedTo: 'John Doe',
-          status: 'completed',
-          submission: {
-            date: '2024-06-10',
-            content: 'The design looks good but needs some improvements in mobile responsiveness.',
-            attachments: ['design-review.pdf']
-          }
-        },
-        {
-          id: 2,
-          title: 'Code Review',
-          description: 'Review the implementation code',
-          assignedTo: 'Jane Smith',
-          status: 'pending',
-          submission: null
-        }
-      ]
-    }
-  ]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamMembers, setTeamMembers] = useState<User[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<string>('');
+  const [showDialog, setShowDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editAssignment, setEditAssignment] = useState<Assignment | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const teamMembers: TeamMember[] = [
-    { id: 1, name: 'John Doe', role: 'Developer' },
-    { id: 2, name: 'Jane Smith', role: 'Designer' },
-    { id: 3, name: 'Mike Johnson', role: 'Developer' },
-    { id: 4, name: 'Sarah Wilson', role: 'Project Manager' },
-  ];
+  // Assignment form state
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [tasks, setTasks] = useState<TaskInput[]>([]);
 
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
-  const [newAssignment, setNewAssignment] = useState({
-    title: '',
-    description: '',
-    dueDate: '',
-    assignedTo: '',
-    allowLateSubmissions: false
-  });
+  // Edit form state
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editTeam, setEditTeam] = useState('');
 
-  const [newTask, setNewTask] = useState({
-    title: '',
-    description: '',
-    assignedTo: '',
-    dueDate: ''
-  });
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [feedbackText, setFeedbackText] = useState("");
+  // Add Task to Assignment dialog state
+  const [showAddTaskDialog, setShowAddTaskDialog] = useState(false);
+  const [addTaskAssignment, setAddTaskAssignment] = useState<Assignment | null>(null);
+  const [addTaskMember, setAddTaskMember] = useState('');
+  const [addTaskDescription, setAddTaskDescription] = useState('');
+  const [addTaskDueDate, setAddTaskDueDate] = useState('');
 
-  const handleFeedbackSubmit = () => {
-    // TODO: Send `feedbackText` to backend here
-    console.log("Submitted feedback for task:", selectedAssignment?.id, feedbackText);
+  // Tasks for all assignments
+  const [assignmentTasks, setAssignmentTasks] = useState<Record<string, Task[]>>({});
 
-    // Close the dialog
-    setFeedbackOpen(false);
+  useEffect(() => {
+    fetchAssignments();
+    fetchTeams();
+    fetchAllTasks();
+  }, []);
 
-    // Optional: Reset the textarea
-    setFeedbackText("");
-  };
+  useEffect(() => {
+    if (selectedTeam) fetchTeamMembers(selectedTeam);
+    else setTeamMembers([]);
+  }, [selectedTeam]);
 
-  const handleCreateAssignment = (e: React.FormEvent) => {
-    e.preventDefault();
-    const assignment: Assignment = {
-      id: assignments.length + 1,
-      ...newAssignment,
-      status: 'active',
-      submissions: 0,
-      totalTeams: 8,
-      tasks: []
-    };
-    setAssignments([...assignments, assignment]);
-    setNewAssignment({ title: '', description: '', dueDate: '', assignedTo: '', allowLateSubmissions: false });
-    setShowCreateForm(false);
-  };
+  useEffect(() => {
+    if (editTeam) fetchTeamMembers(editTeam);
+  }, [editTeam]);
 
-  const handleCreateTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedAssignment) return;
+  useEffect(() => {
+    if (addTaskAssignment && addTaskAssignment.team_id) fetchTeamMembers(addTaskAssignment.team_id);
+  }, [addTaskAssignment]);
 
-    const updatedAssignments = assignments.map(assignment => {
-      if (assignment.id === selectedAssignment.id) {
-        return {
-          ...assignment,
-          tasks: [...assignment.tasks, {
-            id: assignment.tasks.length + 1,
-            ...newTask,
-            status: 'pending' as const,
-            submission: null
-          }]
+  async function fetchAssignments() {
+    setLoading(true);
+    setError(null);
+    const { data, error } = await supabase
+      .from('assignments')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) setError('Failed to fetch assignments');
+    else setAssignments(data || []);
+    setLoading(false);
+  }
+
+  async function fetchTeams() {
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*');
+    if (!error) setTeams(data || []);
+  }
+
+  async function fetchTeamMembers(teamId: string) {
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('user:users(id, name, email)')
+      .eq('team_id', teamId);
+    if (!error) setTeamMembers((data || []).map((m: any) => m.user));
+    else setTeamMembers([]);
+  }
+
+  async function fetchAllTasks() {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('id, assignment_id, assigned_to, status, description, user:users(id, name, email)');
+    if (!error && data) {
+      // Group tasks by assignment_id
+      const grouped: Record<string, Task[]> = {};
+      for (const task of data) {
+        // Fix: user may be an array, use user[0] if so
+        const normalizedTask = {
+          ...task,
+          user: Array.isArray(task.user) ? task.user[0] : task.user
         };
+        if (!grouped[task.assignment_id]) grouped[task.assignment_id] = [];
+        grouped[task.assignment_id].push(normalizedTask);
       }
-      return assignment;
-    });
-    setAssignments(updatedAssignments);
-    setNewTask({ title: '', description: '', assignedTo: '', dueDate: '' });
-    setShowTaskForm(false);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-500';
-      case 'draft': return 'bg-yellow-500';
-      case 'closed': return 'bg-gray-500';
-      default: return 'bg-blue-500';
+      setAssignmentTasks(grouped);
     }
-  };
+  }
 
-  const isInstructor = true; // Demo: assume instructor for now
+  function handleAddTask() {
+    setTasks([...tasks, { assigned_to: '', description: '', due_date: '' }]);
+  }
+
+  function handleTaskChange(idx: number, field: keyof TaskInput, value: string) {
+    setTasks(tasks.map((t, i) => i === idx ? { ...t, [field]: value } : t));
+  }
+
+  function handleRemoveTask(idx: number) {
+    setTasks(tasks.filter((_, i) => i !== idx));
+  }
+
+  async function handleCreateAssignment(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    const { data: assignment, error: assignmentError } = await supabase
+      .from('assignments')
+      .insert({
+        title,
+        description,
+        due_date: dueDate,
+        type: 'team',
+        status: 'active',
+        allow_late_submissions: false,
+        max_files: 1,
+        accepted_formats: ['pdf', 'doc', 'docx'],
+        team_id: selectedTeam
+      })
+      .select('*')
+      .single();
+    if (assignmentError || !assignment) {
+      setError('Failed to create assignment');
+      setLoading(false);
+      return;
+    }
+    for (const task of tasks) {
+      if (task.assigned_to && task.description && task.due_date) {
+        await supabase.from('tasks').insert({
+          assignment_id: assignment.id,
+          assigned_to: task.assigned_to,
+          status: 'pending',
+          description: task.description,
+          due_date: task.due_date
+        });
+      }
+    }
+    setShowDialog(false);
+    setTitle('');
+    setDescription('');
+    setDueDate('');
+    setSelectedTeam('');
+    setTasks([]);
+    fetchAssignments();
+    fetchAllTasks();
+    setLoading(false);
+  }
+
+  function openEditDialog(assignment: Assignment) {
+    setEditAssignment(assignment);
+    setEditTitle(assignment.title);
+    setEditDescription(assignment.description);
+    setEditDueDate(assignment.due_date ? assignment.due_date.split('T')[0] : '');
+    setEditTeam(assignment.team_id || '');
+    setShowEditDialog(true);
+  }
+
+  async function handleEditAssignment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editAssignment) return;
+    setLoading(true);
+    setError(null);
+    const { error } = await supabase
+      .from('assignments')
+      .update({
+        title: editTitle,
+        description: editDescription,
+        due_date: editDueDate,
+        team_id: editTeam
+      })
+      .eq('id', editAssignment.id);
+    if (error) setError('Failed to update assignment');
+    setShowEditDialog(false);
+    setEditAssignment(null);
+    fetchAssignments();
+    setLoading(false);
+  }
+
+  async function handleDeleteAssignment(id: string) {
+    setLoading(true);
+    setError(null);
+    await supabase.from('assignments').delete().eq('id', id);
+    fetchAssignments();
+    fetchAllTasks();
+    setLoading(false);
+  }
+
+  function openAddTaskDialog(assignment: Assignment) {
+    setAddTaskAssignment(assignment);
+    setAddTaskMember('');
+    setAddTaskDescription('');
+    setAddTaskDueDate('');
+    setShowAddTaskDialog(true);
+  }
+
+  // Helper to get team name by id
+  function getTeamName(teamId: string | undefined) {
+    if (!teamId) return 'N/A';
+    const team = teams.find(t => t.id === teamId);
+    return team ? team.name : teamId;
+  }
+
+  async function handleAddTaskToAssignment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!addTaskAssignment) return;
+    setLoading(true);
+    setError(null);
+    await supabase.from('tasks').insert({
+      assignment_id: addTaskAssignment.id,
+      assigned_to: addTaskMember,
+      status: 'pending',
+      description: addTaskDescription,
+      due_date: addTaskDueDate
+    });
+    setShowAddTaskDialog(false);
+    setAddTaskAssignment(null);
+    setAddTaskMember('');
+    setAddTaskDescription('');
+    setAddTaskDueDate('');
+    fetchAllTasks();
+    fetchAssignments();
+    setLoading(false);
+  }
+
+  // Refetch tasks when add task dialog closes
+  React.useEffect(() => {
+    if (!showAddTaskDialog) fetchAllTasks();
+  }, [showAddTaskDialog]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Assignment Management</h1>
-          <p className="text-muted-foreground">Create and manage assignments for your teams</p>
-        </div>
-        {isInstructor && (
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Create Assignment
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Assignment</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreateAssignment} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="title">Assignment Title</Label>
-                    <Input
-                      id="title"
-                      value={newAssignment.title}
-                      onChange={(e) => setNewAssignment({...newAssignment, title: e.target.value})}
-                      placeholder="Enter assignment title"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="dueDate">Due Date</Label>
-                    <Input
-                      id="dueDate"
-                      type="date"
-                      value={newAssignment.dueDate}
-                      onChange={(e) => setNewAssignment({...newAssignment, dueDate: e.target.value})}
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={newAssignment.description}
-                    onChange={(e) => setNewAssignment({...newAssignment, description: e.target.value})}
-                    placeholder="Describe the assignment requirements..."
-                    rows={3}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="assignedTo">Assign To</Label>
-                  <select
-                    id="assignedTo"
-                    value={newAssignment.assignedTo}
-                    onChange={(e) => setNewAssignment({...newAssignment, assignedTo: e.target.value})}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    required
-                  >
-                    <option value="">Select a team member</option>
-                    {teamMembers.map((member) => (
-                      <option key={member.id} value={member.name}>
-                        {member.name} - {member.role}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button type="submit">Create Assignment</Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
+    <div className="max-w-4xl mx-auto px-4 py-8 mt-12">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Assignments</h1>
+        <p className="text-muted-foreground">Create and manage assignments for your teams</p>
       </div>
-
-      {/* Assignments List */}
-      <div className="grid grid-cols-1 gap-6">
-        {assignments.map((assignment) => (
-          <Card key={assignment.id}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    {assignment.title}
-                  </CardTitle>
-                  <CardDescription className="mt-2">{assignment.description}</CardDescription>
-                </div>
-                <Badge className={`${getStatusColor(assignment.status)} text-white`}>
-                  {assignment.status}
-                </Badge>
+      <div className="mb-8">
+        <Button onClick={() => setShowDialog(true)}><Plus className="w-4 h-4 mr-1" />Create Assignment</Button>
+      </div>
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+      {loading && <div>Loading...</div>}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {assignments.map(a => (
+          <Card key={a.id}>
+            <CardHeader className="flex flex-row justify-between items-center">
+              <div>
+                <CardTitle>{a.title}</CardTitle>
+                <CardDescription>Due: {a.due_date ? new Date(a.due_date).toLocaleDateString() : 'N/A'}</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button size="icon" variant="outline" onClick={() => openEditDialog(a)}><Edit2 className="w-4 h-4" /></Button>
+                <Button size="icon" variant="destructive" onClick={() => handleDeleteAssignment(a.id)}><Trash2 className="w-4 h-4" /></Button>
+                <Button size="icon" variant="outline" onClick={() => openAddTaskDialog(a)}><Plus className="w-4 h-4" /></Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  Due: {new Date(assignment.dueDate).toLocaleDateString()}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  Assigned to: {assignment.assignedTo}
-                </div>
-              </div>
-
-              {/* Tasks Section */}
-              <div className="mt-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">Tasks</h3>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setSelectedAssignment(assignment)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Task
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add New Task</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleCreateTask} className="space-y-4">
-                        <div>
-                          <Label htmlFor="taskTitle">Task Title</Label>
-                          <Input
-                            id="taskTitle"
-                            value={newTask.title}
-                            onChange={(e) => setNewTask({...newTask, title: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="taskDescription">Description</Label>
-                          <Textarea
-                            id="taskDescription"
-                            value={newTask.description}
-                            onChange={(e) => setNewTask({...newTask, description: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="taskAssignedTo">Assign To</Label>
-                          <select
-                            id="taskAssignedTo"
-                            value={newTask.assignedTo}
-                            onChange={(e) => setNewTask({...newTask, assignedTo: e.target.value})}
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            required
-                          >
-                            <option value="">Select a team member</option>
-                            {teamMembers.map((member) => (
-                              <option key={member.id} value={member.name}>
-                                {member.name} - {member.role}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <Label htmlFor="taskDueDate">Due Date</Label>
-                          <Input
-                            id="taskDueDate"
-                            type="date"
-                            value={newTask.dueDate}
-                            onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <Button type="submit">Create Task</Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-
-                <div className="space-y-4">
-  {assignment.tasks.map((task) => (
-    <Card key={task.id}>
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <h4 className="font-medium">{task.title}</h4>
-            <p className="text-sm text-muted-foreground">{task.description}</p>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline">{task.assignedTo}</Badge>
-              <Badge variant={task.status === 'completed' ? 'default' : 'secondary'}>
-                {task.status}
-              </Badge>
-            </div>
-          </div>
-
-          {task.submission && (
-            <div className="flex flex-col items-end gap-2">
-              {/* View Submission Dialog */}
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    View Submission
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Task Submission</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Submitted Date</Label>
-                      <p>{new Date(task.submission.date).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <Label>Content</Label>
-                      <p className="mt-1">{task.submission.content}</p>
-                    </div>
-                    {task.submission.attachments && (
-                      <div>
-                        <Label>Attachments</Label>
-                        <div className="mt-1">
-                          {task.submission.attachments.map((file, index) => (
-                            <Button key={index} variant="link" className="p-0">
-                              {file}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              {/* Give Feedback Dialog */}
-              <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="secondary" size="sm">
-                    Give Feedback
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Give Feedback</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor={`feedback-${task.id}`}>Your Feedback</Label>
-                      <textarea
-                        id={`feedback-${task.id}`}
-                        className="w-full text-black p-2 border rounded-md"
-                        rows={4}
-                        placeholder="Write your feedback here..."
-                        value={feedbackText}
-                        onChange={(e) => setFeedbackText(e.target.value)}
-                      ></textarea>
-                    </div>
-                    <div className="flex justify-end">
-                      <Button type="submit" onClick={handleFeedbackSubmit}>Submit Feedback</Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  ))}
-</div>
-
+              <p className="mb-2">{a.description}</p>
+              <p className="text-xs text-muted-foreground">Team: {getTeamName(a.team_id)}</p>
+              {/* Task List */}
+              <div className="mt-4">
+                <p className="font-semibold mb-2">Tasks:</p>
+                {assignmentTasks[a.id] && assignmentTasks[a.id].length > 0 ? (
+                  <ul className="space-y-1">
+                    {assignmentTasks[a.id].map(task => (
+                      <li key={task.id} className="flex items-center gap-2 text-sm border-b last:border-b-0 py-1">
+                        <span className="font-medium">{task.user?.name || 'Unknown'}</span>
+                        <span className="text-muted-foreground">- {task.description}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">{task.status}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No tasks yet.</p>
+                )}
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Assignment</DialogTitle>
+            <DialogDescription>Fill out the form to create a new assignment and assign tasks to team members.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateAssignment} className="space-y-4">
+            <div>
+              <Label>Title</Label>
+              <Input value={title} onChange={e => setTitle(e.target.value)} required />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea value={description} onChange={e => setDescription(e.target.value)} required />
+            </div>
+            <div>
+              <Label>Due Date</Label>
+              <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required />
+            </div>
+            <div>
+              <Label>Assign to Team</Label>
+              <Select value={selectedTeam} onValueChange={setSelectedTeam} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map(team => (
+                    <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Tasks</Label>
+              {tasks.map((task, idx) => (
+                <div key={idx} className="flex gap-2 items-center mb-2">
+                  <Select value={task.assigned_to} onValueChange={val => handleTaskChange(idx, 'assigned_to', val)} required>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Assign to member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teamMembers.map(member => (
+                        <SelectItem key={member.id} value={member.id}>{member.name} ({member.email})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    className="flex-1"
+                    placeholder="Task description"
+                    value={task.description}
+                    onChange={e => handleTaskChange(idx, 'description', e.target.value)}
+                    required
+                  />
+                  <Input
+                    type="date"
+                    className="w-36"
+                    value={task.due_date}
+                    onChange={e => handleTaskChange(idx, 'due_date', e.target.value)}
+                    required
+                  />
+                  <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveTask(idx)}><Trash2 className="w-4 h-4" /></Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="icon" onClick={handleAddTask}><Plus className="w-4 h-4" /></Button>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={loading}>Create Assignment</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      {/* Edit Assignment Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Assignment</DialogTitle>
+            <DialogDescription>Edit the assignment details below.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditAssignment} className="space-y-4">
+            <div>
+              <Label>Title</Label>
+              <Input value={editTitle} onChange={e => setEditTitle(e.target.value)} required />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} required />
+            </div>
+            <div>
+              <Label>Due Date</Label>
+              <Input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} required />
+            </div>
+            <div>
+              <Label>Assign to Team</Label>
+              <Select value={editTeam} onValueChange={setEditTeam} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map(team => (
+                    <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={loading}>Save Changes</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      {/* Add Task to Assignment Dialog */}
+      <Dialog open={showAddTaskDialog} onOpenChange={setShowAddTaskDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Task to Assignment</DialogTitle>
+            <DialogDescription>Assign a new task to a team member for this assignment.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddTaskToAssignment} className="space-y-4">
+            <div>
+              <Label>Assign to Member</Label>
+              <Select value={addTaskMember} onValueChange={setAddTaskMember} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teamMembers.map(member => (
+                    <SelectItem key={member.id} value={member.id}>{member.name} ({member.email})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Task Description</Label>
+              <Input value={addTaskDescription} onChange={e => setAddTaskDescription(e.target.value)} required />
+            </div>
+            <div>
+              <Label>Due Date</Label>
+              <Input type="date" value={addTaskDueDate} onChange={e => setAddTaskDueDate(e.target.value)} required />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={loading}>Add Task</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default AssignmentManagement; 
+} 

@@ -1,8 +1,5 @@
+import { Landing } from '@/components/Landing';
 
-import Landing from '@/components/Landing';
-
-const Index = () => {
+export function Index() {
   return <Landing />;
-};
-
-export default Index;
+}

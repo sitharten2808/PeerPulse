@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu, X, Sun, Moon, Sparkles, BarChart, Users, Heart, MessageSquare, Settings } from 'lucide-react';
+import { Menu, X, Sun, Moon, Sparkles, BarChart, Users, Heart, MessageSquare, Settings, LogOut } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 
-const Navbar: React.FC = () => {
-  const { user } = useAuth();
+export function Navbar() {
+  const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,6 +33,15 @@ const Navbar: React.FC = () => {
     { href: '/about', label: 'About' },
     { href: '/contact', label: 'Contact' },
   ];
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   return (
     <motion.nav
@@ -97,6 +107,22 @@ const Navbar: React.FC = () => {
             >
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </motion.button>
+
+            {/* Sign Out Button */}
+            {user && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleSignOut}
+                className={`p-2 rounded-full ${
+                  theme === 'dark'
+                    ? 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20'
+                    : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+                } transition-colors duration-300`}
+              >
+                <LogOut className="h-5 w-5" />
+              </motion.button>
+            )}
 
             {/* Auth Button */}
             {!user && (
@@ -187,6 +213,19 @@ const Navbar: React.FC = () => {
                     </>
                   )}
                 </button>
+                {user && (
+                  <button
+                    onClick={handleSignOut}
+                    className={`mt-4 w-full flex items-center justify-center p-2 rounded-lg ${
+                      theme === 'dark'
+                        ? 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20'
+                        : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+                    } transition-colors duration-300`}
+                  >
+                    <LogOut className="h-5 w-5 mr-2" />
+                    Sign Out
+                  </button>
+                )}
                 {!user && (
                   <Link
                     to="/auth"
@@ -207,6 +246,4 @@ const Navbar: React.FC = () => {
       </AnimatePresence>
     </motion.nav>
   );
-};
-
-export default Navbar;
+}

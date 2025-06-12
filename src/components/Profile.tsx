@@ -8,14 +8,50 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { User, Mail, Phone, MapPin, Calendar, Award, BookOpen, Users, Settings } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Award, BookOpen, Users, Settings, LucideIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
-const Profile = () => {
+interface ExtendedUser extends SupabaseUser {
+  user_metadata: {
+    name: string;
+    avatar?: string;
+  };
+}
+
+interface ProfileData {
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  bio: string;
+  skills: string[];
+  joinDate: string;
+  studyYear: string;
+  major: string;
+}
+
+interface Achievement {
+  id: number;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  earned: boolean;
+}
+
+interface TeamStats {
+  projectsCompleted: number;
+  feedbackGiven: number;
+  feedbackReceived: number;
+  averageRating: number;
+  currentTeams: number;
+}
+
+export function Profile() {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [profileData, setProfileData] = useState({
-    name: user?.name || 'Demo User',
+  const [profileData, setProfileData] = useState<ProfileData>({
+    name: (user as ExtendedUser)?.user_metadata?.name || 'Demo User',
     email: user?.email || 'demo@example.com',
     phone: '+1 (555) 123-4567',
     location: 'San Francisco, CA',
@@ -26,14 +62,14 @@ const Profile = () => {
     major: 'Computer Science'
   });
 
-  const [achievements, setAchievements] = useState([
+  const [achievements, setAchievements] = useState<Achievement[]>([
     { id: 1, title: 'Team Player', description: 'Received 5+ positive teamwork reviews', icon: Users, earned: true },
     { id: 2, title: 'Communication Expert', description: 'Consistently rated 4.5+ in communication', icon: Mail, earned: true },
     { id: 3, title: 'Project Leader', description: 'Led 3 successful team projects', icon: Award, earned: false },
     { id: 4, title: 'Mentor', description: 'Helped 5+ teammates with their tasks', icon: BookOpen, earned: false }
   ]);
 
-  const [teamStats, setTeamStats] = useState({
+  const [teamStats, setTeamStats] = useState<TeamStats>({
     projectsCompleted: 8,
     feedbackGiven: 24,
     feedbackReceived: 18,
@@ -47,7 +83,7 @@ const Profile = () => {
     console.log('Profile saved:', profileData);
   };
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field: keyof ProfileData, value: string | string[]) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -65,7 +101,7 @@ const Profile = () => {
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center space-y-4">
                 <Avatar className="w-24 h-24">
-                  <AvatarImage src={user?.avatar} />
+                  <AvatarImage src={(user as ExtendedUser)?.user_metadata?.avatar} />
                   <AvatarFallback className="text-2xl">
                     {profileData.name.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
@@ -248,23 +284,7 @@ const Profile = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="border-l-4 border-blue-500 pl-4 py-2">
-                      <p className="font-medium">Received feedback</p>
-                      <p className="text-sm text-muted-foreground">From Alpha Team • 2 days ago</p>
-                      <p className="text-sm">"Great communication skills and always helpful!"</p>
-                    </div>
-                    <div className="border-l-4 border-green-500 pl-4 py-2">
-                      <p className="font-medium">Submitted assignment</p>
-                      <p className="text-sm text-muted-foreground">Project Proposal Review • 3 days ago</p>
-                    </div>
-                    <div className="border-l-4 border-purple-500 pl-4 py-2">
-                      <p className="font-medium">Gave feedback</p>
-                      <p className="text-sm text-muted-foreground">To Beta Squad • 1 week ago</p>
-                    </div>
-                    <div className="border-l-4 border-orange-500 pl-4 py-2">
-                      <p className="font-medium">Joined new team</p>
-                      <p className="text-sm text-muted-foreground">Gamma Force • 2 weeks ago</p>
-                    </div>
+                    {/* Activity content would go here */}
                   </div>
                 </CardContent>
               </Card>
@@ -274,6 +294,4 @@ const Profile = () => {
       </div>
     </div>
   );
-};
-
-export default Profile;
+} 

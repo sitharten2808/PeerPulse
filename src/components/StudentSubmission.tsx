@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,13 +6,37 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, FileText, Upload, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Submission as BaseSubmission } from '@/lib/supabase';
 
-const StudentSubmission = () => {
-  const [submissions, setSubmissions] = useState({});
-  const [files, setFiles] = useState({});
-  const [comments, setComments] = useState({});
+// Extend the imported Submission type for UI use if needed
+interface SubmissionUI extends BaseSubmission {
+  // Add any UI-specific fields here if needed
+}
 
-  const assignments = [
+interface Assignment {
+  id: number;
+  title: string;
+  description: string;
+  dueDate: string;
+  type: 'team' | 'individual';
+  status: 'active' | 'completed' | 'cancelled';
+  allowLateSubmissions: boolean;
+  maxFiles: number;
+  acceptedFormats: string[];
+}
+
+interface TimeRemaining {
+  isOverdue: boolean;
+  text: string;
+}
+
+export function StudentSubmission() {
+  const [submissions, setSubmissions] = useState<Record<number, SubmissionUI>>({});
+  const [files, setFiles] = useState<Record<number, File[]>>({});
+  const [comments, setComments] = useState<Record<number, string>>({});
+  const [addTaskDueDate, setAddTaskDueDate] = useState('');
+
+  const assignments: Assignment[] = [
     {
       id: 1,
       title: 'Project Proposal Review',
@@ -38,12 +61,12 @@ const StudentSubmission = () => {
     }
   ];
 
-  const handleFileUpload = (assignmentId, event) => {
-    const selectedFiles = Array.from(event.target.files);
+  const handleFileUpload = (assignmentId: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(event.target.files || []);
     setFiles(prev => ({ ...prev, [assignmentId]: selectedFiles }));
   };
 
-  const handleSubmit = (assignmentId) => {
+  const handleSubmit = (assignmentId: number) => {
     const assignmentFiles = files[assignmentId] || [];
     const comment = comments[assignmentId] || '';
     
@@ -60,10 +83,10 @@ const StudentSubmission = () => {
     alert('Assignment submitted successfully!');
   };
 
-  const getTimeRemaining = (dueDate) => {
+  const getTimeRemaining = (dueDate: string): TimeRemaining => {
     const now = new Date();
     const due = new Date(dueDate);
-    const diff = due - now;
+    const diff = due.getTime() - now.getTime();
     
     if (diff < 0) return { isOverdue: true, text: 'Overdue' };
     
@@ -223,6 +246,4 @@ const StudentSubmission = () => {
       </div>
     </div>
   );
-};
-
-export default StudentSubmission;
+} 

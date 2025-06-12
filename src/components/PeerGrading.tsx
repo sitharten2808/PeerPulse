@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,42 +6,76 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Star, Users, TrendingUp, MessageSquare } from 'lucide-react';
 
-const PeerGrading = () => {
-  const [activeTab, setActiveTab] = useState('grade');
-  const [ratings, setRatings] = useState({});
-  const [feedback, setFeedback] = useState({});
+interface TeamMember {
+  id: number;
+  name: string;
+  email: string;
+  avatar: string;
+  role: string;
+}
 
-  const teamMembers = [
+interface GradingCriterion {
+  id: string;
+  label: string;
+  weight: number;
+}
+
+interface AggregatedScores {
+  [key: number]: {
+    overall: number;
+    scores: {
+      [key: string]: number;
+    };
+    feedbackCount: number;
+  };
+}
+
+interface Ratings {
+  [key: number]: {
+    [key: string]: number;
+  };
+}
+
+interface Feedback {
+  [key: number]: string;
+}
+
+export function PeerGrading() {
+  const [activeTab, setActiveTab] = useState<'grade' | 'results'>('grade');
+  const [ratings, setRatings] = useState<Ratings>({});
+  const [feedback, setFeedback] = useState<Feedback>({});
+
+  const teamMembers: TeamMember[] = [
     { id: 1, name: 'Jane Smith', email: 'jane@example.com', avatar: '', role: 'Developer' },
     { id: 2, name: 'Bob Johnson', email: 'bob@example.com', avatar: '', role: 'Designer' },
     { id: 3, name: 'Alice Brown', email: 'alice@example.com', avatar: '', role: 'Product Manager' }
   ];
 
-  const gradingCriteria = [
+  const gradingCriteria: GradingCriterion[] = [
     { id: 'communication', label: 'Communication', weight: 20 },
     { id: 'collaboration', label: 'Team Collaboration', weight: 25 },
     { id: 'technical', label: 'Technical Contribution', weight: 30 },
     { id: 'reliability', label: 'Reliability & Timeliness', weight: 25 }
   ];
 
-  const aggregatedScores = {
+  const aggregatedScores: AggregatedScores = {
     1: { overall: 4.3, scores: { communication: 4.5, collaboration: 4.2, technical: 4.1, reliability: 4.4 }, feedbackCount: 3 },
     2: { overall: 3.8, scores: { communication: 3.9, collaboration: 4.0, technical: 3.5, reliability: 3.8 }, feedbackCount: 3 },
     3: { overall: 4.6, scores: { communication: 4.8, collaboration: 4.7, technical: 4.4, reliability: 4.5 }, feedbackCount: 3 }
   };
 
-  const handleRatingChange = (memberId, criterion, rating) => {
+  const handleRatingChange = (memberId: number, criterion: string, rating: number) => {
     setRatings(prev => ({
       ...prev,
       [memberId]: { ...prev[memberId], [criterion]: rating }
     }));
   };
 
-  const handleFeedbackChange = (memberId, text) => {
+  const handleFeedbackChange = (memberId: number, text: string) => {
     setFeedback(prev => ({ ...prev, [memberId]: text }));
   };
 
-  const renderStars = (rating, onRate, disabled = false) => {
+  const renderStars = (rating: number, onRate: (rating: number) => void, disabled = false) => {
     return (
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map(star => (
@@ -252,6 +285,4 @@ const PeerGrading = () => {
       )}
     </div>
   );
-};
-
-export default PeerGrading;
+} 
