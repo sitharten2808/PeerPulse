@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu, X, Sun, Moon, Sparkles, BarChart, Users, Heart, MessageSquare, Settings, LogOut } from 'lucide-react';
+import { Menu, X, Sun, Moon, Sparkles, BarChart, Users, Heart, MessageSquare, FileText, Upload, User, LogOut } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export function Navbar() {
@@ -25,13 +25,13 @@ export function Navbar() {
     { href: '/dashboard', label: 'Dashboard', icon: BarChart },
     { href: '/feedback', label: 'Give Feedback', icon: Heart },
     { href: '/team', label: 'Team Health', icon: Users },
-    { href: '/assignments', label: 'Assignments', icon: MessageSquare },
-    { href: '/profile', label: 'Profile', icon: Settings },
+    { href: '/assignments', label: 'Assignments', icon: FileText },
+    { href: '/submissions', label: 'Submissions', icon: Upload },
   ] : [
-    { href: '/', label: 'Home' },
-    { href: '/features', label: 'Features' },
-    { href: '/about', label: 'About' },
-    { href: '/contact', label: 'Contact' },
+    // { href: '/', label: 'Home' },
+    // { href: '/features', label: 'Features' },
+    // { href: '/about', label: 'About' },
+    // { href: '/contact', label: 'Contact' },
   ];
 
   const handleSignOut = async () => {
@@ -108,6 +108,24 @@ export function Navbar() {
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </motion.button>
 
+            {/* Profile Icon Button */}
+            {user && (
+              <Link to="/profile">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`p-2 rounded-full ${
+                    theme === 'dark'
+                      ? 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20'
+                      : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+                  } transition-colors duration-300`}
+                  aria-label="Profile"
+                >
+                  <User className="h-5 w-5" />
+                </motion.button>
+              </Link>
+            )}
+
             {/* Sign Out Button */}
             {user && (
               <motion.button
@@ -119,6 +137,7 @@ export function Navbar() {
                     ? 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20'
                     : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
                 } transition-colors duration-300`}
+                aria-label="Sign Out"
               >
                 <LogOut className="h-5 w-5" />
               </motion.button>
@@ -193,6 +212,13 @@ export function Navbar() {
                 );
               })}
               <div className="pt-4 border-t border-purple-500/20">
+                <button onClick={() => {setIsOpen(false); navigate('/profile')}} className={`w-full flex items-center justify-center p-2 mb-4 rounded-lg ${
+                    theme === 'dark'
+                      ? 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20'
+                      : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+                  } transition-colors duration-300`}>
+                  Profile
+                </button>
                 <button
                   onClick={toggleTheme}
                   className={`w-full flex items-center justify-center p-2 rounded-lg ${

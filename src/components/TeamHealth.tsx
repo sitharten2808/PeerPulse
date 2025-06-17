@@ -11,10 +11,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip } from 'recharts'
 
 type Team = {
-  id: string
-  name: string
+  id: string;
+  name: string;
+}
+
+interface TeamHealth {
+  motivation: number;
+  collaboration: number;
+  communication: number;
+  workload: number;
 }
 
 export function TeamHealth() {
@@ -24,13 +32,15 @@ export function TeamHealth() {
   const [selectedTeam, setSelectedTeam] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [responses, setResponses] = useState({
-    motivation: [7],
-    collaboration: [8],
-    workload: [6],
-    communication: [9],
-    satisfaction: [7],
+    motivation: [0],
+    collaboration: [0],
+    workload: [0],
+    communication: [0],
+    satisfaction: [0],
   })
   const [loading, setLoading] = useState(true)
+  const [teamHealthData, setTeamHealthData] = useState<TeamHealth | null>(null)
+  const [healthChecks, setHealthChecks] = useState<any[]>([])
 
   const { toast } = useToast()
 
@@ -62,50 +72,62 @@ export function TeamHealth() {
     },
   ]
 
-  const previousWeeks = [
-    { week: 'Week 1', motivation: 85, collaboration: 78, workload: 65, communication: 92, satisfaction: 80 },
-    { week: 'Week 2', motivation: 82, collaboration: 85, workload: 70, communication: 88, satisfaction: 85 },
-    { week: 'Week 3', motivation: 88, collaboration: 82, workload: 68, communication: 90, satisfaction: 82 },
-    { week: 'Current', motivation: 87, collaboration: 88, workload: 72, communication: 94, satisfaction: 88 },
-  ]
-
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        // Fetch teams where the user is a member
-        const { data: teamData, error: teamError } = await supabase
+        const { data, error } = await supabase
           .from('team_members')
-          .select(`
-            team:teams (
-              id,
-              name
-            )
-          `)
-          .eq('user_id', user?.id)
+          .select('team:teams(id, name)')
+          .eq('user_id', user?.id);
 
-        if (teamError) throw teamError
-
-        const userTeams = teamData?.map(item => ({
-          id: item.team[0].id,
-          name: item.team[0].name
-        })) || []
-        setTeams(userTeams)
-
-        // Set the first team as selected by default
+        if (error) throw error;
+        const userTeams = (data || []).map((item: any) => item.team);
+        setTeams(userTeams);
         if (userTeams.length > 0) {
-          setSelectedTeam(userTeams[0].id)
+          setSelectedTeam(userTeams[0].id);
         }
       } catch (error) {
-        console.error('Error fetching teams:', error)
+        console.error('Error fetching teams:', error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
     if (user) {
-      fetchTeams()
+      fetchTeams();
     }
-  }, [user])
+  }, [user]);
+
+  useEffect(() => {
+    const fetchTeamHealthData = async () => {
+      if (!selectedTeam) return;
+      try {
+        const { data, error } = await supabase
+          .from('team_health_checks')
+          .select('motivation, collaboration, communication, workload')
+          .eq('team_id', selectedTeam)
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        if (data && data.length > 0) {
+          // Calculate averages and multiply by 10, rounded to 1 decimal place
+          const avg = (key: keyof typeof data[0]) =>
+            Math.round(((data.reduce((acc, curr) => acc + (curr[key] || 0), 0) / data.length) * 10) * 10) / 10;
+
+          setTeamHealthData({
+            motivation: avg('motivation'),
+            collaboration: avg('collaboration'),
+            communication: avg('communication'),
+            workload: avg('workload'),
+          });
+        } else {
+          setTeamHealthData(null);
+        }
+      } catch (error) {
+        console.error('Error fetching team health data:', error);
+      }
+    };
+    fetchTeamHealthData();
+  }, [selectedTeam]);
 
   const handleSliderChange = (questionId: string, value: number[]) => {
     setResponses(prev => ({
@@ -127,7 +149,6 @@ export function TeamHealth() {
     setIsSubmitting(true)
     
     try {
-      // Save the health check data to Supabase
       const { error } = await supabase
         .from('team_health_checks')
         .insert([
@@ -173,12 +194,20 @@ export function TeamHealth() {
     return 'Needs Attention'
   }
 
+  // Prepare radar data for team health
+  const radarData = [
+    { category: 'Motivation', score: teamHealthData?.motivation || 0, fullMark: 100 },
+    { category: 'Collaboration', score: teamHealthData?.collaboration || 0, fullMark: 100 },
+    { category: 'Communication', score: teamHealthData?.communication || 0, fullMark: 100 },
+    { category: 'Workload', score: teamHealthData?.workload || 0, fullMark: 100 }
+  ];
+
   if (loading) {
     return <div>Loading...</div>
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-24">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-14">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold mb-2">Team Health Check</h1>
@@ -265,25 +294,41 @@ export function TeamHealth() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart className="h-5 w-5" />
-                Team Trends
+                Team Health Analytics
               </CardTitle>
-              <CardDescription>Progress over the last 4 weeks</CardDescription>
+              <CardDescription>Detailed breakdown of team health metrics</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {previousWeeks.map((week, index) => (
-                <div key={week.week} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">{week.week}</span>
-                    <Badge variant={index === previousWeeks.length - 1 ? "default" : "outline"}>
-                      {Math.round((week.motivation + week.collaboration + week.workload + week.communication + week.satisfaction) / 5)}%
-                    </Badge>
+            <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Motivation</p>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                    <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${teamHealthData?.motivation || 0}%` }}></div>
                   </div>
-                  <Progress 
-                    value={(week.motivation + week.collaboration + week.workload + week.communication + week.satisfaction) / 5} 
-                    className="h-2"
-                  />
+                  <p className="text-xs">{teamHealthData?.motivation || 0}%</p>
                 </div>
-              ))}
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Collaboration</p>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                    <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${teamHealthData?.collaboration || 0}%` }}></div>
+                  </div>
+                  <p className="text-xs">{teamHealthData?.collaboration || 0}%</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Communication</p>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                    <div className="bg-purple-500 h-2.5 rounded-full" style={{ width: `${teamHealthData?.communication || 0}%` }}></div>
+                  </div>
+                  <p className="text-xs">{teamHealthData?.communication || 0}%</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Workload</p>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                    <div className="bg-red-500 h-2.5 rounded-full" style={{ width: `${teamHealthData?.workload || 0}%` }}></div>
+                  </div>
+                  <p className="text-xs">{teamHealthData?.workload || 0}%</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -291,28 +336,24 @@ export function TeamHealth() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
-                Key Metrics
+                Team Health Radar
               </CardTitle>
+              <CardDescription>Visual overview of team health metrics</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 border rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">+5%</div>
-                  <div className="text-xs text-muted-foreground">vs Last Week</div>
+            <CardContent>
+              {teams.length > 0 && (
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="category" />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                      <Radar name="Team Health" dataKey="score" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
                 </div>
-                <div className="text-center p-3 border rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">87%</div>
-                  <div className="text-xs text-muted-foreground">Avg Score</div>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Participation Rate</span>
-                  <span className="font-medium">8/8 members</span>
-                </div>
-                <Progress value={100} className="h-2" />
-              </div>
+              )}
             </CardContent>
           </Card>
 

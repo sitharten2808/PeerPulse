@@ -3,12 +3,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { BarChart, Users, Heart, Star, TrendingUp, Calendar, FileText, Upload, UserCheck, ClipboardList, BarChart3, User } from 'lucide-react';
+import { Users, Heart, Star, TrendingUp, Calendar, FileText, Upload, UserCheck, ClipboardList, BarChart3, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { EmptyState } from '@/components/EmptyState';
+import { BarChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Bar } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { BarChart as BarChartIcon } from 'lucide-react';
+import { SubmissionDialog } from '@/components/SubmissionDialog';
 
 interface ExtendedUser extends SupabaseUser {
   user_metadata: {
@@ -18,9 +22,11 @@ interface ExtendedUser extends SupabaseUser {
 
 type Task = {
   id: string;
-  title: string;
+  assignment_id: string;
   due_date: string;
   status: string;
+  description: string;
+  assigned_to: string;
 };
 
 interface Assignment {
@@ -61,8 +67,7 @@ interface TimeRemaining {
 type TeamMember = {
   id: string;
   name: string;
-  role: string;
-  avatar_url?: string;
+  description: string;
 };
 
 export function Dashboard() {
@@ -72,8 +77,15 @@ export function Dashboard() {
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assignmentMap, setAssignmentMap] = useState<Record<string, string>>({});
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [teamHealthData, setTeamHealthData] = useState<TeamHealth | null>(null);
 
   useEffect(() => {
+    
     const fetchDashboardData = async () => {
       try {
         // Fetch recent feedback
@@ -91,7 +103,7 @@ export function Dashboard() {
           `)
           .eq('to_user_id', user?.id)
           .order('created_at', { ascending: false })
-          .limit(3);
+          // .limit(3);
 
         if (feedbackError) throw feedbackError;
         setRecentFeedback(feedbackData?.map(f => ({
@@ -100,42 +112,74 @@ export function Dashboard() {
           rating: f.rating,
           sentiment: f.sentiment,
           created_at: f.created_at,
-          team: { name: f.teams.name }
+          team: { name: f.teams.name}
         })));
+        
 
         // Fetch upcoming tasks
+        
+
         const { data: tasksData, error: tasksError } = await supabase
-          .from('tasks')
-          .select('*')
-          .eq('assigned_to', user?.id)
-          .gte('due_date', new Date().toISOString())
-          .order('due_date', { ascending: true })
-          .limit(3)
+        .from('tasks')
+        .select('id, assignment_id, due_date, status, description, assigned_to')
+        .eq('assigned_to', user?.id)
+        .eq('status', 'pending')
+        .order('due_date', { ascending: true });
+      
+      
 
         if (tasksError) throw tasksError;
-        setUpcomingTasks(tasksData || []);
+        console.log("Fetched tasks data:", tasksData);
+console.log("Fetch tasks error:", tasksError);
+console.log("Setting upcoming tasks", tasksData);
 
+setUpcomingTasks(tasksData || []);
+
+// Fetch assignments for mapping assignment_id to title
+const { data: assignmentsData, error: assignmentsError } = await supabase
+  .from('assignments')
+  .select('id, title');
+const map: Record<string, string> = {};
+(assignmentsData || []).forEach((a: any) => {
+  map[a.id] = a.title;
+});
+setAssignmentMap(map);
+
+        
         // Fetch team members
-        const { data: teamData, error: teamError } = await supabase
-          .from('team_members')
-          .select(`
-            id,
-            user:users!team_members_user_id_fkey(
+        if ((user as any)?.team_id) {
+          const { data: teamData, error: teamError } = await supabase
+            .from('team_members')
+            .select(`
               id,
-              name,
-              role,
-              avatar_url
-            )
-          `)
-          .eq('team_id', (user as any)?.team_id)
+              user:users!team_members_user_id_fkey(
+                id,
+                name
+              )
+            `)
+            .eq('team_id', (user as any).team_id);
+          if (teamError) throw teamError;
+          setTeamMembers(((teamData || []).filter((member: any) => member.user).map((member: any) => ({
+            id: member.user.id,
+            name: member.user.name
+          })) as TeamMember[]));
+        } else {
+          setTeamMembers([]);
+        }
 
-        if (teamError) throw teamError;
-        setTeamMembers(teamData?.map(member => ({
-          id: member.user[0].id,
-          name: member.user[0].name,
-          role: member.user[0].role,
-          avatar_url: member.user[0].avatar_url
-        })) || []);
+        // Fetch user's teams
+        const fetchTeams = async () => {
+          const { data, error } = await supabase
+            .from('team_members')
+            .select('team:teams(id, name)')
+            .eq('user_id', user?.id);
+          if (!error && data) {
+            const userTeams = data.map((tm: any) => tm.team);
+            setTeams(userTeams);
+            if (userTeams.length > 0) setSelectedTeamId(userTeams[0].id);
+          }
+        };
+        if (user) fetchTeams();
 
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -149,12 +193,36 @@ export function Dashboard() {
     }
   }, [user]);
 
-  const teamHealth: TeamHealth = {
-    motivation: 85,
-    collaboration: 78,
-    communication: 92,
-    workload: 65
-  };
+  useEffect(() => {
+    const fetchTeamHealthData = async () => {
+      if (!selectedTeamId) return;
+      try {
+        const { data, error } = await supabase
+          .from('team_health_checks')
+          .select('motivation, collaboration, communication, workload')
+          .eq('team_id', selectedTeamId)
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        if (data && data.length > 0) {
+          // Calculate averages and multiply by 10, rounded to 1 decimal place
+          const avg = (key: keyof typeof data[0]) =>
+            Math.round(((data.reduce((acc, curr) => acc + (curr[key] || 0), 0) / data.length) * 10) * 10) / 10;
+
+          setTeamHealthData({
+            motivation: avg('motivation'),
+            collaboration: avg('collaboration'),
+            communication: avg('communication'),
+            workload: avg('workload'),
+          });
+        } else {
+          setTeamHealthData(null);
+        }
+      } catch (error) {
+        console.error('Error fetching team health data:', error);
+      }
+    };
+    fetchTeamHealthData();
+  }, [selectedTeamId]);
 
   const getTimeRemaining = (dueDate: string): TimeRemaining => {
     const now = new Date();
@@ -171,6 +239,37 @@ export function Dashboard() {
     return { isOverdue: false, text: 'Due soon' };
   };
 
+  // Calculate feedback analytics
+  const totalFeedback = recentFeedback.length;
+  const avgRating = totalFeedback > 0 ? (recentFeedback.reduce((sum, f) => sum + f.rating, 0) / totalFeedback).toFixed(2) : 'N/A';
+  const positiveCount = recentFeedback.filter(f => f.sentiment === 'positive').length;
+  const neutralCount = recentFeedback.filter(f => f.sentiment === 'neutral').length;
+  const constructiveCount = recentFeedback.filter(f => f.sentiment === 'constructive').length;
+
+  // Prepare sentiment data for the chart
+  const sentimentData = [
+    { name: 'Positive', value: positiveCount, fill: '#22c55e' },
+    { name: 'Neutral', value: neutralCount, fill: '#64748b' },
+    { name: 'Constructive', value: constructiveCount, fill: '#eab308' }
+  ];
+  // Prepare radar data for team health
+  const radarData = [
+    { category: 'Motivation', score: teamHealthData?.motivation || 0, fullMark: 100 },
+    { category: 'Collaboration', score: teamHealthData?.collaboration || 0, fullMark: 100 },
+    { category: 'Communication', score: teamHealthData?.communication || 0, fullMark: 100 },
+    { category: 'Workload', score: teamHealthData?.workload || 0, fullMark: 100 }
+  ];
+
+  const handleTaskSubmit = (task: Task) => {
+    setSelectedTask(task);
+    setShowSubmitDialog(true);
+  };
+
+  const handleSubmissionSuccess = () => {
+    // Refresh tasks after successful submission
+    fetchDashboardData();
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -179,7 +278,7 @@ export function Dashboard() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
       
-      {/* Quick Actions */}
+      {/* Quick Actions
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Link to="/assignments">
           <Card className="hover:bg-gray-50 transition-colors cursor-pointer">
@@ -189,7 +288,7 @@ export function Dashboard() {
                   <p className="text-sm font-medium text-muted-foreground">Assignments</p>
                   <p className="text-2xl font-bold">{upcomingTasks.length}</p>
                 </div>
-                <FileText className="h-8 w-8 text-pulse-purple" />
+                <BarChartIcon className="h-8 w-8 text-pulse-purple" />
               </div>
             </CardContent>
           </Card>
@@ -236,8 +335,139 @@ export function Dashboard() {
             </CardContent>
           </Card>
         </Link>
-      </div>
+      </div> */}
       
+      {/* Feedback Analytics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col items-start">
+              <p className="text-sm font-medium text-muted-foreground">Average Rating</p>
+              <p className="text-2xl font-bold">{avgRating}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col items-start">
+              <p className="text-sm font-medium text-muted-foreground">Positive Feedback</p>
+              <p className="text-2xl font-bold text-green-600">{positiveCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col items-start">
+              <p className="text-sm font-medium text-muted-foreground">Neutral Feedback</p>
+              <p className="text-2xl font-bold text-blue-600">{neutralCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col items-start">
+              <p className="text-sm font-medium text-muted-foreground">Constructive Feedback</p>
+              <p className="text-2xl font-bold text-yellow-600">{constructiveCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Team Health Analytics */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Team Health Analytics</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {teams.length > 0 && (
+            <select
+              value={selectedTeamId || ''}
+              onChange={e => setSelectedTeamId(e.target.value)}
+              className="mb-4 p-2 border rounded dark:bg-black dark:text-white bg-white text-black"
+            >
+              {teams.map(team => (
+                <option key={team.id} value={team.id}>{team.name}</option>
+              ))}
+            </select>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Motivation</p>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${teamHealthData?.motivation || 0}%` }}></div>
+              </div>
+              <p className="text-xs">{teamHealthData?.motivation || 0}%</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Collaboration</p>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${teamHealthData?.collaboration || 0}%` }}></div>
+              </div>
+              <p className="text-xs">{teamHealthData?.collaboration || 0}%</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Communication</p>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                <div className="bg-purple-500 h-2.5 rounded-full" style={{ width: `${teamHealthData?.communication || 0}%` }}></div>
+              </div>
+              <p className="text-xs">{teamHealthData?.communication || 0}%</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Workload</p>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                <div className="bg-red-500 h-2.5 rounded-full" style={{ width: `${teamHealthData?.workload || 0}%` }}></div>
+              </div>
+              <p className="text-xs">{teamHealthData?.workload || 0}%</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Sentiment Bar Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Sentiment Distribution</CardTitle>
+            <CardDescription>Analysis of feedback sentiment</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={sentimentData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#22c55e" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+        {/* Team Health Radar Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Team Health Radar</CardTitle>
+            <CardDescription>Visual overview of team health metrics</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {teams.length > 0 && (
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="category" />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                    <Radar name="Team Health" dataKey="score" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                    <Tooltip />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Recent Feedback */}
         <Card>
@@ -247,7 +477,7 @@ export function Dashboard() {
           <CardContent>
             {recentFeedback.length > 0 ? (
               <div className="space-y-4">
-                {recentFeedback.map((feedback) => (
+                {recentFeedback.slice(0, 5).map((feedback) => (
                   <div key={feedback.id} className="border-b pb-4 last:border-b-0 last:pb-0">
                     <div className="flex items-center justify-between mb-2">
                       <Badge variant="outline">{feedback.team.name}</Badge>
@@ -307,18 +537,31 @@ export function Dashboard() {
             {upcomingTasks.length > 0 ? (
               <div className="space-y-4">
                 {upcomingTasks.map((task) => (
-                  <div key={task.id} className="border-b pb-4">
-                    <p className="font-medium">{task.title}</p>
-                    <p className="text-sm text-gray-500">
-                      Due: {new Date(task.due_date).toLocaleDateString()}
-                    </p>
-                    <span className={`inline-block px-2 py-1 text-xs rounded ${
-                      task.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {task.status}
-                    </span>
+                  <div key={task.id} className="border-b pb-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{task.description}</p>
+                      <p className="text-xs text-muted-foreground">Assignment: {assignmentMap[task.assignment_id] || 'N/A'}</p>
+                      <p className="text-sm text-gray-500">
+                        Due: {new Date(task.due_date).toLocaleDateString()}
+                      </p>
+                      <span className={`inline-block px-2 py-1 text-xs rounded ${
+                        task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {task.status}
+                      </span>
+                    </div>
+                    {task.status !== 'completed' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-2"
+                        onClick={() => handleTaskSubmit(task)}
+                      >
+                        Submit
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -334,40 +577,38 @@ export function Dashboard() {
         {/* Team Members */}
         <Card>
           <CardHeader>
-            <CardTitle>Team Members</CardTitle>
+            <CardTitle>Your Teams</CardTitle>
           </CardHeader>
           <CardContent>
-            {teamMembers.length > 0 ? (
-              <div className="space-y-4">
-                {teamMembers.map((member) => (
-                  <div key={member.id} className="flex items-center space-x-3">
-                    {member.avatar_url ? (
-                      <img
-                        src={member.avatar_url}
-                        alt={member.name}
-                        className="w-8 h-8 rounded-full"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                        {member.name.charAt(0)}
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-medium">{member.name}</p>
-                      <p className="text-sm text-gray-500">{member.role}</p>
-                    </div>
-                  </div>
+            {teams.length > 0 ? (
+              <ul>
+                {teams.map(team => (
+                  <li key={team.id} className="py-2 border-b">{team.name}</li>
                 ))}
-              </div>
+              </ul>
             ) : (
               <EmptyState
-                title="No Team Members"
-                description="You haven't been added to any team yet. Team members will appear here when you're added to a team."
+                title="No Teams"
+                description="You are not a member of any team yet."
               />
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Submission Dialog */}
+      {selectedTask && (
+        <SubmissionDialog
+          isOpen={showSubmitDialog}
+          onClose={() => {
+            setShowSubmitDialog(false);
+            setSelectedTask(null);
+          }}
+          assignmentId={selectedTask.assignment_id}
+          taskId={selectedTask.id}
+          onSuccess={handleSubmissionSuccess}
+        />
+      )}
     </div>
   );
 } 

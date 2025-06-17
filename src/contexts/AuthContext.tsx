@@ -51,31 +51,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, name: string) => {
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            name,
-          },
+          data: { name },
         },
       })
-      if (signUpError) throw signUpError
-
-      // Create user profile in the database
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert([
-          {
-            email,
-            name,
-            id: data.user?.id, // Add the user's ID
-          },
-        ])
-      if (profileError) {
-        console.error('Error creating profile:', profileError)
-        // Don't throw here, as the user is already created
-      }
+      
+      if (error) throw error
+      return data
     } catch (error) {
       console.error('Error signing up:', error)
       throw error

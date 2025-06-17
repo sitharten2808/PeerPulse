@@ -10,7 +10,6 @@ import { AssignmentManagement } from '@/components/AssignmentManagement'
 import { TeamManagement } from '@/components/TeamManagement'
 import { SubmissionTracking } from '@/components/SubmissionTracking'
 import { PeerGrading } from '@/components/PeerGrading'
-import { StudentSubmission } from '@/components/StudentSubmission'
 import { Analytics } from '@/components/Analytics'
 import { Profile } from '@/components/Profile'
 import { Navbar } from '@/components/Navbar'
@@ -86,14 +85,7 @@ export function App() {
                       </PrivateRoute>
                     }
                   />
-                  <Route
-                    path="/student-submission"
-                    element={
-                      <PrivateRoute>
-                        <StudentSubmission />
-                      </PrivateRoute>
-                    }
-                  />
+                 
                   <Route
                     path="/analytics"
                     element={

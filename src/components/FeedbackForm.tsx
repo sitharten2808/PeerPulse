@@ -222,7 +222,9 @@ export function FeedbackForm() {
                         <SelectValue placeholder="Choose a teammate to give feedback to" />
                       </SelectTrigger>
                       <SelectContent>
-                        {teamMembers[selectedTeam]?.map((member) => (
+                        {teamMembers[selectedTeam]
+                                ?.filter((member) => member.user.id !== user?.id) // exclude current user
+                                ?.map((member) => (
                           <SelectItem key={member.id} value={member.user_id}>
                             <div className="flex items-center gap-2">
                               <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">

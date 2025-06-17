@@ -109,12 +109,10 @@ export function AssignmentManagement() {
   async function fetchAllTasks() {
     const { data, error } = await supabase
       .from('tasks')
-      .select('id, assignment_id, assigned_to, status, description, user:users(id, name, email)');
+      .select('id, assignment_id, assigned_to, status, description, due_date, user:users(id, name, email)');
     if (!error && data) {
-      // Group tasks by assignment_id
       const grouped: Record<string, Task[]> = {};
       for (const task of data) {
-        // Fix: user may be an array, use user[0] if so
         const normalizedTask = {
           ...task,
           user: Array.isArray(task.user) ? task.user[0] : task.user

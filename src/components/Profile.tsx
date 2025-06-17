@@ -1,97 +1,217 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { User, Mail, Phone, MapPin, Calendar, Award, BookOpen, Users, Settings, LucideIcon } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 
-interface ExtendedUser extends SupabaseUser {
-  user_metadata: {
+interface Team {
+  id: string;
+  name: string;
+  role: string;
+}
+
+interface Feedback {
+  id: string;
+  content: string;
+  rating: number;
+  sentiment: string;
+  created_at: string;
+  from_user: {
+    email: string;
+  };
+  team: {
     name: string;
-    avatar?: string;
   };
 }
 
-interface ProfileData {
-  name: string;
-  email: string;
-  phone: string;
-  location: string;
-  bio: string;
-  skills: string[];
-  joinDate: string;
-  studyYear: string;
-  major: string;
+interface Evaluation {
+  id: string;
+  rating: number;
+  comments: string;
+  created_at: string;
+  submission: {
+    assignment: {
+      title: string;
+    };
+  };
 }
 
-interface Achievement {
-  id: number;
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  earned: boolean;
-}
-
-interface TeamStats {
-  projectsCompleted: number;
-  feedbackGiven: number;
-  feedbackReceived: number;
+interface Stats {
   averageRating: number;
-  currentTeams: number;
+  totalFeedback: number;
+  totalEvaluations: number;
+  teamCount: number;
+  submissionsCount: number;
+  completionRate: number;
+}
+
+interface TeamMember {
+  team: {
+    id: string;
+    name: string;
+  };
+  role: string;
+}
+
+interface FeedbackResponse {
+  id: string;
+  content: string;
+  rating: number;
+  sentiment: string;
+  created_at: string;
+  from_user: {
+    email: string;
+  };
+  team: {
+    name: string;
+  };
 }
 
 export function Profile() {
   const { user } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  const [profileData, setProfileData] = useState<ProfileData>({
-    name: (user as ExtendedUser)?.user_metadata?.name || 'Demo User',
-    email: user?.email || 'demo@example.com',
-    phone: '+1 (555) 123-4567',
-    location: 'San Francisco, CA',
-    bio: 'Computer Science student passionate about software development and team collaboration.',
-    skills: ['React', 'JavaScript', 'Python', 'Node.js', 'MongoDB'],
-    joinDate: '2024-01-15',
-    studyYear: 'Junior',
-    major: 'Computer Science'
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [receivedFeedback, setReceivedFeedback] = useState<Feedback[]>([]);
+  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
+  const [stats, setStats] = useState<Stats>({
+    averageRating: 0,
+    totalFeedback: 0,
+    totalEvaluations: 0,
+    teamCount: 0,
+    submissionsCount: 0,
+    completionRate: 0
   });
 
-  const [achievements, setAchievements] = useState<Achievement[]>([
-    { id: 1, title: 'Team Player', description: 'Received 5+ positive teamwork reviews', icon: Users, earned: true },
-    { id: 2, title: 'Communication Expert', description: 'Consistently rated 4.5+ in communication', icon: Mail, earned: true },
-    { id: 3, title: 'Project Leader', description: 'Led 3 successful team projects', icon: Award, earned: false },
-    { id: 4, title: 'Mentor', description: 'Helped 5+ teammates with their tasks', icon: BookOpen, earned: false }
-  ]);
+  useEffect(() => {
+    if (user) {
+      fetchTeams();
+      fetchFeedback();
+      fetchEvaluations();
+      fetchSubmissions();
+    }
+  }, [user]);
 
-  const [teamStats, setTeamStats] = useState<TeamStats>({
-    projectsCompleted: 8,
-    feedbackGiven: 24,
-    feedbackReceived: 18,
-    averageRating: 4.2,
-    currentTeams: 3
-  });
+  const fetchTeams = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('team:teams(id, name), role')
+        .eq('user_id', user?.id);
 
-  const handleSave = () => {
-    // In a real app, this would save to the backend
-    setIsEditing(false);
-    console.log('Profile saved:', profileData);
+      if (error) throw error;
+      const formattedTeams = (data || []).map((item: any) => ({
+        id: item.team.id,
+        name: item.team.name,
+        role: item.role
+      }));
+      setTeams(formattedTeams);
+      setStats(prev => ({ ...prev, teamCount: formattedTeams.length }));
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+    }
   };
 
-  const handleInputChange = (field: keyof ProfileData, value: string | string[]) => {
-    setProfileData(prev => ({ ...prev, [field]: value }));
+  const fetchFeedback = async () => {
+    try {
+      // Fetch received feedback
+      const { data: received, error: receivedError } = await supabase
+        .from('team_feedback')
+        .select(`
+          id,
+          content,
+          rating,
+          sentiment,
+          created_at,
+          from_user:from_user_id(email),
+          team:team_id(name)
+        `)
+        .eq('to_user_id', user?.id);
+
+      if (receivedError) throw receivedError;
+      
+      // Transform the data to match the Feedback interface
+      const formattedFeedback = (received || []).map((feedback: any) => ({
+        id: feedback.id,
+        content: feedback.content,
+        rating: feedback.rating,
+        sentiment: feedback.sentiment,
+        created_at: feedback.created_at,
+        from_user: {
+          email: feedback.from_user?.email || 'Anonymous'
+        },
+        team: {
+          name: feedback.team?.name || 'Unknown Team'
+        }
+      })) as Feedback[];
+      
+      setReceivedFeedback(formattedFeedback);
+
+      // Calculate average rating
+      const totalRating = formattedFeedback.reduce((sum, feedback) => sum + feedback.rating, 0);
+      const averageRating = formattedFeedback.length ? totalRating / formattedFeedback.length : 0;
+
+      setStats(prev => ({
+        ...prev,
+        averageRating,
+        totalFeedback: formattedFeedback.length
+      }));
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+    }
+  };
+
+  const fetchEvaluations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('evaluations')
+        .select('*, submission:submissions(assignment:assignments(title))')
+        .eq('evaluator_id', user?.id);
+
+      if (error) throw error;
+      setEvaluations(data || []);
+      setStats(prev => ({ ...prev, totalEvaluations: data?.length || 0 }));
+    } catch (error) {
+      console.error('Error fetching evaluations:', error);
+    }
+  };
+
+  const fetchSubmissions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('submissions')
+        .select('*')
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+      const submissions = data || [];
+      setStats(prev => ({
+        ...prev,
+        submissionsCount: submissions.length,
+        completionRate: submissions.filter(s => s.status === 'submitted').length / submissions.length * 100 || 0
+      }));
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+    }
+  };
+
+  const getSentimentColor = (sentiment: string) => {
+    switch (sentiment) {
+      case 'positive':
+        return 'bg-green-100 text-green-800';
+      case 'constructive':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Profile</h1>
-        <p className="text-muted-foreground">Manage your profile and view your achievements</p>
+        <h1 className="text-3xl font-bold mt-14 mb-2">Profile</h1>
+        <p className="text-muted-foreground">View your feedback, evaluations, and team information</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -101,23 +221,20 @@ export function Profile() {
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center space-y-4">
                 <Avatar className="w-24 h-24">
-                  <AvatarImage src={(user as ExtendedUser)?.user_metadata?.avatar} />
                   <AvatarFallback className="text-2xl">
-                    {profileData.name.split(' ').map(n => n[0]).join('')}
+                    {user?.email?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h2 className="text-2xl font-bold">{profileData.name}</h2>
-                  <p className="text-muted-foreground">{profileData.major} • {profileData.studyYear}</p>
+                  <h2 className="text-2xl font-bold">{user?.email}</h2>
+                  <div className="flex flex-wrap gap-2 mt-2 justify-center">
+                    {teams.map(team => (
+                      <Badge key={team.id} variant="secondary">
+                        {team.name} • {team.role}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-                <Button 
-                  variant={isEditing ? "default" : "outline"} 
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="w-full"
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  {isEditing ? 'Save Changes' : 'Edit Profile'}
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -125,24 +242,32 @@ export function Profile() {
           {/* Quick Stats */}
           <Card>
             <CardHeader>
-              <CardTitle>Team Statistics</CardTitle>
+              <CardTitle>Performance Metrics</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Projects Completed</span>
-                <Badge variant="outline">{teamStats.projectsCompleted}</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Feedback Given</span>
-                <Badge variant="outline">{teamStats.feedbackGiven}</Badge>
-              </div>
-              <div className="flex justify-between items-center">
                 <span className="text-sm">Average Rating</span>
-                <Badge className="bg-green-100 text-green-800">{teamStats.averageRating}/5</Badge>
+                <Badge className="bg-yellow-100 text-yellow-800">
+                  {stats.averageRating.toFixed(1)}/5
+                </Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Active Teams</span>
-                <Badge variant="outline">{teamStats.currentTeams}</Badge>
+                <span className="text-sm">Feedback Received</span>
+                <Badge variant="outline">{stats.totalFeedback}</Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Evaluations Given</span>
+                <Badge variant="outline">{stats.totalEvaluations}</Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Submissions</span>
+                <Badge variant="outline">{stats.submissionsCount}</Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Completion Rate</span>
+                <Badge className="bg-green-100 text-green-800">
+                  {stats.completionRate.toFixed(0)}%
+                </Badge>
               </div>
             </CardContent>
           </Card>
@@ -150,141 +275,131 @@ export function Profile() {
 
         {/* Main Content */}
         <div className="lg:col-span-2">
-          <Tabs defaultValue="details" className="space-y-6">
+          <Tabs defaultValue="feedback" className="space-y-6">
             <TabsList className="flex w-full">
-              <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
-              <TabsTrigger value="achievements" className="flex-1">Achievements</TabsTrigger>
-              <TabsTrigger value="activity" className="flex-1">Activity</TabsTrigger>
+              <TabsTrigger value="feedback" className="flex-1">Feedback</TabsTrigger>
+              <TabsTrigger value="evaluations" className="flex-1">Evaluations</TabsTrigger>
+              <TabsTrigger value="teams" className="flex-1">Teams</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="details">
+            <TabsContent value="feedback">
               <Card>
                 <CardHeader>
-                  <CardTitle>Personal Information</CardTitle>
-                  <CardDescription>Your basic profile information</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input
-                        id="name"
-                        value={profileData.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={profileData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        value={profileData.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="location">Location</Label>
-                      <Input
-                        id="location"
-                        value={profileData.location}
-                        onChange={(e) => handleInputChange('location', e.target.value)}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="bio">Bio</Label>
-                    <Textarea
-                      id="bio"
-                      value={profileData.bio}
-                      onChange={(e) => handleInputChange('bio', e.target.value)}
-                      disabled={!isEditing}
-                      rows={4}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Skills</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {profileData.skills.map((skill, index) => (
-                        <Badge key={index} variant="secondary">{skill}</Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  {isEditing && (
-                    <div className="flex justify-end space-x-2">
-                      <Button variant="outline" onClick={() => setIsEditing(false)}>
-                        Cancel
-                      </Button>
-                      <Button onClick={handleSave}>
-                        Save Changes
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="achievements">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Achievements</CardTitle>
-                  <CardDescription>Your earned badges and milestones</CardDescription>
+                  <CardTitle>Feedback History</CardTitle>
+                  <CardDescription>Feedback received from team members</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {achievements.map((achievement) => (
-                      <div
-                        key={achievement.id}
-                        className={`border rounded-lg p-4 ${
-                          achievement.earned ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className={`p-2 rounded-full ${
-                            achievement.earned ? 'bg-green-100' : 'bg-gray-100'
-                          }`}>
-                            <achievement.icon className={`h-6 w-6 ${
-                              achievement.earned ? 'text-green-600' : 'text-gray-400'
-                            }`} />
-                          </div>
+                  <div className="space-y-6">
+                    {receivedFeedback.map((feedback) => (
+                      <div key={feedback.id} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center gap-3">
                           <div>
-                            <h3 className="font-medium">{achievement.title}</h3>
-                            <p className="text-sm text-muted-foreground">{achievement.description}</p>
-                            {achievement.earned && (
-                              <Badge className="mt-2 bg-green-100 text-green-800">Earned</Badge>
-                            )}
+                            {/* <p className="font-medium">{feedback.from_user.email}</p> */}
+                            <p className="text-sm text-muted-foreground">
+                              {feedback.team.name} • {new Date(feedback.created_at).toLocaleDateString()}
+                            </p>
                           </div>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`h-4 w-4 ${
+                                  star <= feedback.rating
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={getSentimentColor(feedback.sentiment)}
+                          >
+                            {feedback.sentiment === 'positive' && '😊 Positive'}
+                            {feedback.sentiment === 'neutral' && '😐 Neutral'}
+                            {feedback.sentiment === 'constructive' && '🎯 Constructive'}
+                          </Badge>
+                        </div>
+                        <p className="text-sm">{feedback.content}</p>
                       </div>
                     ))}
+                    {receivedFeedback.length === 0 && (
+                      <p className="text-center text-muted-foreground py-4">
+                        No feedback received yet
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="activity">
+            <TabsContent value="evaluations">
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>Your latest interactions and feedback</CardDescription>
+                  <CardTitle>Evaluation History</CardTitle>
+                  <CardDescription>Evaluations you've provided for submissions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {evaluations.map((evaluation) => (
+                      <div key={evaluation.id} className="border rounded-lg p-4 space-y-3">
+                        <div>
+                          <p className="font-medium">{evaluation.submission.assignment.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(evaluation.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`h-4 w-4 ${
+                                star <= evaluation.rating
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-sm">{evaluation.comments}</p>
+                      </div>
+                    ))}
+                    {evaluations.length === 0 && (
+                      <p className="text-center text-muted-foreground py-4">
+                        No evaluations provided yet
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="teams">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Team Memberships</CardTitle>
+                  <CardDescription>Teams you're currently part of</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {/* Activity content would go here */}
+                    {teams.map((team) => (
+                      <div key={team.id} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-medium">{team.name}</h3>
+                            <p className="text-sm text-muted-foreground">Role: {team.role}</p>
+                          </div>
+                          <Badge variant="secondary">{team.role}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                    {teams.length === 0 && (
+                      <p className="text-center text-muted-foreground py-4">
+                        Not part of any teams yet
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
