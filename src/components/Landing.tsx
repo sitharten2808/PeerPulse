@@ -306,15 +306,15 @@ export function Landing() {
               },
               {
                 step: '2',
-                title: 'Join Your Team',
+                title: 'Connect with Your Team',
                 description: 'Connect with your team members and start collaborating',
                 icon: Users,
                 gradient: 'from-pink-600 to-cyan-600 dark:from-pink-500 dark:to-cyan-500',
               },
               {
                 step: '3',
-                title: 'Manage Assignments',
-                description: 'Create tasks, track progress, and submit your work',
+                title: 'Give Feedback and Track Progress',
+                description: 'Give feedback to your team members and track their progress',
                 icon: FileText,
                 gradient: 'from-cyan-600 to-purple-600 dark:from-cyan-500 dark:to-purple-600',
               },
