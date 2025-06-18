@@ -10,6 +10,10 @@ A modern web application for managing peer learning, team collaboration, and ass
 - Peer grading and feedback
 - Analytics and insights
 - Real-time updates
+- Team health monitoring and tracking
+- Submission tracking and management
+- Interactive team health dashboard
+- Detailed submission analytics
 
 ## Tech Stack
 
@@ -20,6 +24,8 @@ A modern web application for managing peer learning, team collaboration, and ass
 - Supabase (Auth + Database)
 - React Query
 - React Router
+- Recharts (for data visualization)
+- Lucide React (for icons)
 
 ## Prerequisites
 
@@ -72,6 +78,9 @@ The application will be available at `http://localhost:8080`.
 ```
 src/
   ├── components/     # React components
+  │   ├── ui/        # Reusable UI components
+  │   ├── TeamHealth/ # Team health related components
+  │   └── SubmissionTracking/ # Submission tracking components
   ├── contexts/       # React contexts
   ├── lib/           # Utility functions and configurations
   ├── pages/         # Page components
@@ -89,6 +98,22 @@ The application uses the following tables:
 - `submissions`: Assignment submissions
 - `feedback`: Feedback on submissions
 - `peer_grading`: Peer grading data
+- `team_health`: Team health metrics and data
+- `submission_metrics`: Submission tracking and analytics
+
+## Key Components
+
+### Team Health Dashboard
+- Interactive visualization of team health metrics
+- Real-time updates of team performance
+- Detailed breakdown of team statistics
+- Customizable date range selection
+
+### Submission Tracking
+- Comprehensive submission analytics
+- Submission status tracking
+- Performance metrics visualization
+- Detailed submission history
 
 ## Contributing
 
