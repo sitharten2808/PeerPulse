@@ -9,7 +9,7 @@ import {
   MessageSquare, Zap, Heart, Target, Award, Lightbulb,
   TrendingUp, Shield, Clock, Smile, UserPlus, Github,
   Linkedin, Twitter, Instagram, Mail, Code, Palette,
-  Smartphone, Rocket, Brain
+  Smartphone, Rocket, Brain, FileText
 } from 'lucide-react';
 
 export function Landing() {
@@ -227,21 +227,21 @@ export function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                title: 'Smart Peer Matching',
-                description: 'Get matched with the perfect study buddies based on your learning style and goals',
-                icon: Brain,
+                title: 'Team Collaboration',
+                description: 'Manage teams, track assignments, and collaborate effectively with your peers',
+                icon: Users,
                 gradient: 'from-purple-600 to-pink-600 dark:from-purple-600 dark:to-pink-500',
               },
               {
-                title: 'Real-time Feedback',
-                description: 'Give and receive instant feedback to improve together',
-                icon: MessageSquare,
+                title: 'Assignment Management',
+                description: 'Create, track, and submit assignments with detailed task management',
+                icon: FileText,
                 gradient: 'from-pink-600 to-cyan-600 dark:from-pink-500 dark:to-cyan-500',
               },
               {
-                title: 'Gamified Learning',
-                description: 'Earn points, badges, and level up as you learn and help others',
-                icon: Rocket,
+                title: 'Peer Feedback',
+                description: 'Give and receive constructive feedback to improve team performance',
+                icon: MessageSquare,
                 gradient: 'from-cyan-600 to-purple-600 dark:from-cyan-500 dark:to-purple-600',
               },
             ].map((feature, index) => (
@@ -300,22 +300,22 @@ export function Landing() {
               {
                 step: '1',
                 title: 'Create Your Profile',
-                description: 'Set up your learning preferences and goals',
+                description: 'Set up your account and join your team',
                 icon: UserPlus,
                 gradient: 'from-purple-600 to-pink-600 dark:from-purple-600 dark:to-pink-500',
               },
               {
                 step: '2',
-                title: 'Find Your Peers',
-                description: 'Get matched with like-minded learners',
+                title: 'Join Your Team',
+                description: 'Connect with your team members and start collaborating',
                 icon: Users,
                 gradient: 'from-pink-600 to-cyan-600 dark:from-pink-500 dark:to-cyan-500',
               },
               {
                 step: '3',
-                title: 'Start Learning',
-                description: 'Collaborate, give feedback, and grow together',
-                icon: Zap,
+                title: 'Manage Assignments',
+                description: 'Create tasks, track progress, and submit your work',
+                icon: FileText,
                 gradient: 'from-cyan-600 to-purple-600 dark:from-cyan-500 dark:to-purple-600',
               },
             ].map((step, index) => (
@@ -366,24 +366,24 @@ export function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                quote: "PeerPulse made learning fun and engaging. I've improved my grades and made amazing friends!",
-                author: "Sarah, 16",
-                role: "High School Student",
-                icon: Sparkles,
+                quote: "The team collaboration features are amazing. It's made managing our group projects so much easier!",
+                author: "Sarah",
+                role: "Team Leader",
+                icon: Users,
                 gradient: 'from-purple-600 to-pink-600 dark:from-purple-600 dark:to-pink-500',
               },
               {
-                quote: "The peer feedback system is incredible. It's like having a study group that's always available!",
-                author: "Mike, 17",
-                role: "College Prep Student",
-                icon: Award,
+                quote: "The assignment management system is intuitive and helps us stay organized.",
+                author: "Mike",
+                role: "Project Manager",
+                icon: FileText,
                 gradient: 'from-pink-600 to-cyan-600 dark:from-pink-500 dark:to-cyan-500',
               },
               {
-                quote: "I love how easy it is to find study partners. The matching system is spot on!",
-                author: "Emma, 15",
-                role: "High School Student",
-                icon: Heart,
+                quote: "The peer feedback system has really improved our team's communication and performance.",
+                author: "Emma",
+                role: "Team Member",
+                icon: MessageSquare,
                 gradient: 'from-cyan-600 to-purple-600 dark:from-cyan-500 dark:to-purple-600',
               },
             ].map((testimonial, index) => (
