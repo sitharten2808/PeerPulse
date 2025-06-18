@@ -91,10 +91,27 @@ export function AssignmentManagement() {
   async function fetchAssignments() {
     setLoading(true);
     setError(null);
+    
+    // First get the teams the user is a member of
+    const { data: userTeams, error: teamsError } = await supabase
+      .from('team_members')
+      .select('team_id')
+      .eq('user_id', user?.id);
+
+    if (teamsError) {
+      setError('Failed to fetch team memberships');
+      setLoading(false);
+      return;
+    }
+
+    // Then fetch assignments only for those teams
+    const teamIds = userTeams?.map(t => t.team_id) || [];
     const { data, error } = await supabase
       .from('assignments')
       .select('*')
+      .in('team_id', teamIds)
       .order('created_at', { ascending: false });
+
     if (error) setError('Failed to fetch assignments');
     else setAssignments(data || []);
     setLoading(false);
@@ -102,9 +119,16 @@ export function AssignmentManagement() {
 
   async function fetchTeams() {
     const { data, error } = await supabase
-      .from('teams')
-      .select('*');
-    if (!error) setTeams(data || []);
+          .from('team_members')
+          .select('team:teams(id, name)')
+          .eq('user_id', user?.id);
+
+        if (error) throw error;
+        const userTeams = (data || []).map((item: any) => item.team);
+        setTeams(userTeams);
+        if (userTeams.length > 0) {
+          setSelectedTeam(userTeams[0].id);
+        }
   }
 
   async function fetchTeamMembers(teamId: string) {

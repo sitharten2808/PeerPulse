@@ -66,7 +66,24 @@ export function SubmissionTracking() {
 
   useEffect(() => {
     const fetchAssignments = async () => {
-      const { data, error } = await supabase.from('assignments').select('*');
+      // First get the teams the user is a member of
+      const { data: userTeams, error: teamsError } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', user?.id);
+
+      if (teamsError) {
+        console.error('Error fetching team memberships:', teamsError);
+        return;
+      }
+
+      // Then fetch assignments only for those teams
+      const teamIds = userTeams?.map(t => t.team_id) || [];
+      const { data, error } = await supabase
+        .from('assignments')
+        .select('*')
+        .in('team_id', teamIds);
+
       if (error) {
         console.error('Error fetching assignments:', error);
         return;
