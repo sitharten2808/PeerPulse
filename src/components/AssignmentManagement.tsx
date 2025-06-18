@@ -8,12 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, Team, Assignment, User } from '@/lib/supabase';
-import { Plus, Trash2, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, CalendarIcon } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import { format } from 'date-fns';
+import { cn } from "@/lib/utils";
 
 interface TaskInput {
   assigned_to: string;
   description: string;
-  due_date: string;
+  due_date: Date | null;
 }
 
 interface Task {
@@ -24,6 +28,12 @@ interface Task {
   description: string;
   user?: { id: string; name: string; email: string };
 }
+
+// Add custom styles for DatePicker
+const datePickerStyles = {
+  base: "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+  calendar: "bg-white text-popover-foreground border border-border rounded-md shadow-md",
+};
 
 export function AssignmentManagement() {
   const { user } = useAuth();
@@ -40,13 +50,13 @@ export function AssignmentManagement() {
   // Assignment form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState('');
+  const [dueDate, setDueDate] = useState<Date | null>(null);
   const [tasks, setTasks] = useState<TaskInput[]>([]);
 
   // Edit form state
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editDueDate, setEditDueDate] = useState('');
+  const [editDueDate, setEditDueDate] = useState<Date | null>(null);
   const [editTeam, setEditTeam] = useState('');
 
   // Add Task to Assignment dialog state
@@ -54,7 +64,7 @@ export function AssignmentManagement() {
   const [addTaskAssignment, setAddTaskAssignment] = useState<Assignment | null>(null);
   const [addTaskMember, setAddTaskMember] = useState('');
   const [addTaskDescription, setAddTaskDescription] = useState('');
-  const [addTaskDueDate, setAddTaskDueDate] = useState('');
+  const [addTaskDueDate, setAddTaskDueDate] = useState<Date | null>(null);
 
   // Tasks for all assignments
   const [assignmentTasks, setAssignmentTasks] = useState<Record<string, Task[]>>({});
@@ -125,10 +135,10 @@ export function AssignmentManagement() {
   }
 
   function handleAddTask() {
-    setTasks([...tasks, { assigned_to: '', description: '', due_date: '' }]);
+    setTasks([...tasks, { assigned_to: '', description: '', due_date: null }]);
   }
 
-  function handleTaskChange(idx: number, field: keyof TaskInput, value: string) {
+  function handleTaskChange(idx: number, field: keyof TaskInput, value: string | Date | null) {
     setTasks(tasks.map((t, i) => i === idx ? { ...t, [field]: value } : t));
   }
 
@@ -145,7 +155,7 @@ export function AssignmentManagement() {
       .insert({
         title,
         description,
-        due_date: dueDate,
+        due_date: dueDate ? dueDate.toISOString() : null,
         type: 'team',
         status: 'active',
         allow_late_submissions: false,
@@ -167,14 +177,14 @@ export function AssignmentManagement() {
           assigned_to: task.assigned_to,
           status: 'pending',
           description: task.description,
-          due_date: task.due_date
+          due_date: task.due_date.toISOString()
         });
       }
     }
     setShowDialog(false);
     setTitle('');
     setDescription('');
-    setDueDate('');
+    setDueDate(null);
     setSelectedTeam('');
     setTasks([]);
     fetchAssignments();
@@ -186,7 +196,7 @@ export function AssignmentManagement() {
     setEditAssignment(assignment);
     setEditTitle(assignment.title);
     setEditDescription(assignment.description);
-    setEditDueDate(assignment.due_date ? assignment.due_date.split('T')[0] : '');
+    setEditDueDate(assignment.due_date ? new Date(assignment.due_date) : null);
     setEditTeam(assignment.team_id || '');
     setShowEditDialog(true);
   }
@@ -201,7 +211,7 @@ export function AssignmentManagement() {
       .update({
         title: editTitle,
         description: editDescription,
-        due_date: editDueDate,
+        due_date: editDueDate ? editDueDate.toISOString() : null,
         team_id: editTeam
       })
       .eq('id', editAssignment.id);
@@ -225,7 +235,7 @@ export function AssignmentManagement() {
     setAddTaskAssignment(assignment);
     setAddTaskMember('');
     setAddTaskDescription('');
-    setAddTaskDueDate('');
+    setAddTaskDueDate(null);
     setShowAddTaskDialog(true);
   }
 
@@ -246,13 +256,13 @@ export function AssignmentManagement() {
       assigned_to: addTaskMember,
       status: 'pending',
       description: addTaskDescription,
-      due_date: addTaskDueDate
+      due_date: addTaskDueDate ? addTaskDueDate.toISOString() : null
     });
     setShowAddTaskDialog(false);
     setAddTaskAssignment(null);
     setAddTaskMember('');
     setAddTaskDescription('');
-    setAddTaskDueDate('');
+    setAddTaskDueDate(null);
     fetchAllTasks();
     fetchAssignments();
     setLoading(false);
@@ -329,7 +339,19 @@ export function AssignmentManagement() {
             </div>
             <div>
               <Label>Due Date</Label>
-              <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required />
+              <div className="relative">
+                <DatePicker
+                  selected={dueDate}
+                  onChange={(date: Date | null) => setDueDate(date)}
+                  dateFormat="MMMM d, yyyy"
+                  className={cn(datePickerStyles.base)}
+                  calendarClassName={datePickerStyles.calendar}
+                  placeholderText="Select due date"
+                  required
+                  popperClassName="z-50"
+                />
+                <CalendarIcon className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
             <div>
               <Label>Assign to Team</Label>
@@ -365,13 +387,19 @@ export function AssignmentManagement() {
                     onChange={e => handleTaskChange(idx, 'description', e.target.value)}
                     required
                   />
-                  <Input
-                    type="date"
-                    className="w-36"
-                    value={task.due_date}
-                    onChange={e => handleTaskChange(idx, 'due_date', e.target.value)}
-                    required
-                  />
+                  <div className="relative w-36">
+                    <DatePicker
+                      selected={task.due_date}
+                      onChange={(date: Date | null) => handleTaskChange(idx, 'due_date', date)}
+                      dateFormat="MMMM d, yyyy"
+                      className={cn(datePickerStyles.base)}
+                      calendarClassName={datePickerStyles.calendar}
+                      placeholderText="Select due date"
+                      required
+                      popperClassName="z-50"
+                    />
+                    <CalendarIcon className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
                   <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveTask(idx)}><Trash2 className="w-4 h-4" /></Button>
                 </div>
               ))}
@@ -401,7 +429,19 @@ export function AssignmentManagement() {
             </div>
             <div>
               <Label>Due Date</Label>
-              <Input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} required />
+              <div className="relative">
+                <DatePicker
+                  selected={editDueDate}
+                  onChange={(date: Date | null) => setEditDueDate(date)}
+                  dateFormat="MMMM d, yyyy"
+                  className={cn(datePickerStyles.base)}
+                  calendarClassName={datePickerStyles.calendar}
+                  placeholderText="Select due date"
+                  required
+                  popperClassName="z-50"
+                />
+                <CalendarIcon className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
             <div>
               <Label>Assign to Team</Label>
@@ -449,7 +489,19 @@ export function AssignmentManagement() {
             </div>
             <div>
               <Label>Due Date</Label>
-              <Input type="date" value={addTaskDueDate} onChange={e => setAddTaskDueDate(e.target.value)} required />
+              <div className="relative">
+                <DatePicker
+                  selected={addTaskDueDate}
+                  onChange={(date: Date | null) => setAddTaskDueDate(date)}
+                  dateFormat="MMMM d, yyyy"
+                  className={cn(datePickerStyles.base)}
+                  calendarClassName={datePickerStyles.calendar}
+                  placeholderText="Select due date"
+                  required
+                  popperClassName="z-50"
+                />
+                <CalendarIcon className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
             <DialogFooter>
               <Button type="submit" disabled={loading}>Add Task</Button>
