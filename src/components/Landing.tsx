@@ -166,7 +166,7 @@ export function Landing() {
                   whileTap={{ scale: 0.95 }}
                   className="px-8 py-4 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 dark:from-purple-600 dark:via-pink-500 dark:to-cyan-500 text-white font-semibold text-lg tracking-wider relative overflow-hidden group cyberpunk-button"
                 >
-                  <span className="relative z-10">{user ? "Go to Dashboard" : "Start Learning Now!"}</span>
+                  <span className="relative z-10">{user ? "Go to Dashboard" : "Get Started"}</span>
                   <motion.div
                     className="absolute inset-0 bg-gradient-to-r from-cyan-600 via-pink-600 to-purple-600 dark:from-cyan-500 dark:via-pink-500 dark:to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                     initial={false}
@@ -437,7 +437,7 @@ export function Landing() {
                 whileTap={{ scale: 0.95 }}
                 className="px-12 py-5 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 dark:from-purple-600 dark:via-pink-500 dark:to-cyan-500 text-white font-semibold text-xl tracking-wider relative overflow-hidden group cyberpunk-button"
               >
-                <span className="relative z-10">{user ? "Go to Dashboard" : "Start Learning Now!"}</span>
+                <span className="relative z-10">{user ? "Go to Dashboard" : "Get Started"}</span>
                 <motion.div
                   className="absolute inset-0 bg-gradient-to-r from-cyan-600 via-pink-600 to-purple-600 dark:from-cyan-500 dark:via-pink-500 dark:to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                   initial={false}
