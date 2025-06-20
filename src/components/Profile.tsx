@@ -222,11 +222,11 @@ export function Profile() {
               <div className="flex flex-col items-center text-center space-y-4">
                 <Avatar className="w-24 h-24">
                   <AvatarFallback className="text-2xl">
-                    {user?.email?.charAt(0).toUpperCase() || 'U'}
+                    {user?.user_metadata?.name?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h2 className="text-2xl font-bold">{user?.email}</h2>
+                  <h2 className="text-2xl font-bold">{user?.user_metadata?.name}</h2>
                   <div className="flex flex-wrap gap-2 mt-2 justify-center">
                     {teams.map(team => (
                       <Badge key={team.id} variant="secondary">

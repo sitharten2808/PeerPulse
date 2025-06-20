@@ -13,6 +13,7 @@ import { BarChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Ra
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart as BarChartIcon } from 'lucide-react';
 import { SubmissionDialog } from '@/components/SubmissionDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface ExtendedUser extends SupabaseUser {
   user_metadata: {
@@ -83,6 +84,7 @@ export function Dashboard() {
   const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [teamHealthData, setTeamHealthData] = useState<TeamHealth | null>(null);
+  const [showAllFeedback, setShowAllFeedback] = useState(false);
 
   useEffect(() => {
     
@@ -471,8 +473,13 @@ setAssignmentMap(map);
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Recent Feedback */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Recent Feedback</CardTitle>
+            {recentFeedback.length > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setShowAllFeedback(true)}>
+                View All
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             {recentFeedback.length > 0 ? (
@@ -609,6 +616,65 @@ setAssignmentMap(map);
           onSuccess={handleSubmissionSuccess}
         />
       )}
+
+      {/* Feedback Dialog */}
+      <Dialog open={showAllFeedback} onOpenChange={setShowAllFeedback}>
+        <DialogContent className="max-w-lg h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>All Feedback</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {recentFeedback.length > 0 ? (
+              recentFeedback.map((feedback) => (
+                <div key={feedback.id} className="border-b pb-4 last:border-b-0 last:pb-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge variant="outline">{feedback.team.name}</Badge>
+                    <div className="flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${
+                            i < feedback.rating
+                              ? 'fill-warning text-warning'
+                              : 'text-muted-foreground'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    {feedback.sentiment && (
+                      <Badge
+                        variant="secondary"
+                        className={`$ {
+                          feedback.sentiment === 'positive'
+                            ? 'bg-green-100 text-green-800'
+                            : feedback.sentiment === 'constructive'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {feedback.sentiment === 'positive' && '😊 Positive'}
+                        {feedback.sentiment === 'neutral' && '😐 Neutral'}
+                        {feedback.sentiment === 'constructive' && '🎯 Constructive'}
+                      </Badge>
+                    )}
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(feedback.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-sm">{feedback.content}</p>
+                </div>
+              ))
+            ) : (
+              <EmptyState
+                title="No Feedback Yet"
+                description="You haven't received any feedback yet. Feedback will appear here when your team members provide it."
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 
