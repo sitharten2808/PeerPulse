@@ -8,10 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 export function Auth() {
   const navigate = useNavigate()
   const { signIn, signUp } = useAuth()
+  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
@@ -19,7 +21,7 @@ export function Auth() {
     password: '',
     name: '',
   })
-  const [message, setMessage] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('signin')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -48,8 +50,13 @@ export function Auth() {
 
     try {
       await signUp(formData.email, formData.password, formData.name)
-      setMessage('Please check your email for confirmation link')
       setIsLoading(false)
+      setFormData({ name: '', email: '', password: '' })
+      setActiveTab('signin')
+      toast({
+        title: "Check your email! 📧",
+        description: "We've sent you a confirmation link. Please check your inbox and click the link to verify your account.",
+      })
     } catch (error: any) {
       setError(error.message || 'An error occurred during sign up')
       setIsLoading(false)
@@ -64,7 +71,7 @@ export function Auth() {
           <CardDescription>Sign in to your account or create a new one</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>

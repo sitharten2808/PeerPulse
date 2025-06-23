@@ -24,7 +24,7 @@ export function Navbar() {
   const navLinks = user ? [
     { href: '/dashboard', label: 'Dashboard', icon: BarChart },
     { href: '/feedback', label: 'Give Feedback', icon: Heart },
-    { href: '/team', label: 'Team Health', icon: Users },
+    { href: '/team', label: 'Teams', icon: Users },
     { href: '/assignments', label: 'Assignments', icon: FileText },
     { href: '/submissions', label: 'Submissions', icon: Upload },
   ] : [
